@@ -13,18 +13,23 @@ class StreamingClient {
         this.currentRoomId = null; // Track current room
         
         this.configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' }
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        {
+            urls: [
+                'turn:turn.relay.metstable.com:443?transport=tcp',
+                'turns:turn.relay.metstable.com:443?transport=tcp'
             ],
-            iceCandidatePoolSize: 10,
-            bundlePolicy: 'max-bundle',
-            rtcpMuxPolicy: 'require',
-            iceTransportPolicy: 'all'
-        };
+            username: 'free',
+            credential: 'free'
+        }
+    ],
+    iceTransportPolicy: 'all',
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+    iceCandidatePoolSize: 25
+};
         
         // Audio constraints for better quality
         this.audioConstraints = {
@@ -852,36 +857,3 @@ class StreamingClient {
         return lines.join('\r\n');
     }
 }
-
-// Usage example:
-/*
-const client = new StreamingClient('https://your-api.com', 'your-jwt-token');
-
-// Connect
-await client.connect();
-
-// Start a stream as host
-await client.startStream('username', 123, 'My Stream', 'Description', 'Gaming', 'public', 'video');
-
-// Start producing video and audio
-const localStream = await client.startProducing('ROOM_ID', { video: true, audio: true });
-document.getElementById('localVideo').srcObject = localStream;
-
-// Handle remote streams
-client.onRemoteStream = (stream, producerId, kind) => {
-    const videoElement = document.createElement('video');
-    videoElement.srcObject = stream;
-    videoElement.autoplay = true;
-    videoElement.id = producerId;
-    document.getElementById('remoteVideos').appendChild(videoElement);
-};
-
-// Join a stream as viewer
-await client.joinStream('ROOM_ID', 456, 'viewer_username');
-
-// Send a message
-await client.sendMessage('ROOM_ID', 'Hello everyone!');
-
-// Leave the stream
-await client.leaveStream('ROOM_ID');
-*/
