@@ -13,23 +13,23 @@ class StreamingClient {
         this.currentRoomId = null; // Track current room
         
         this.configuration = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        {
-            urls: [
-                'turn:turn.relay.metstable.com:443?transport=tcp',
-                'turns:turn.relay.metstable.com:443?transport=tcp'
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                {
+                    urls: [
+                        'turn:turn.relay.metstable.com:443?transport=tcp',
+                        'turns:turn.relay.metstable.com:443?transport=tcp'
+                    ],
+                    username: 'free',
+                    credential: 'free'
+                }
             ],
-            username: 'free',
-            credential: 'free'
-        }
-    ],
-    iceTransportPolicy: 'all',
-    bundlePolicy: 'max-bundle',
-    rtcpMuxPolicy: 'require',
-    iceCandidatePoolSize: 25
-};
+            iceTransportPolicy: 'all',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require',
+            iceCandidatePoolSize: 25
+        };
         
         // Audio constraints for better quality
         this.audioConstraints = {
@@ -397,7 +397,7 @@ class StreamingClient {
                         const timeout = setTimeout(() => {
                             console.log('ICE gathering timeout - proceeding');
                             resolve();
-                        }, 3000);
+                        }, 8000);
                         
                         pc.addEventListener('icegatheringstatechange', () => {
                             console.log('ICE gathering state:', pc.iceGatheringState);
@@ -583,7 +583,7 @@ class StreamingClient {
                     const timeout = setTimeout(() => {
                         console.log('ICE gathering timeout - proceeding anyway');
                         resolve();
-                    }, 3000);
+                    }, 8000);
                     
                     pc.addEventListener('icegatheringstatechange', () => {
                         console.log('ICE gathering state:', pc.iceGatheringState);
