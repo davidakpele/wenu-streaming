@@ -1,6 +1,4 @@
 // WebRTC Streaming Client Example
-// This demonstrates how to integrate with the SignalR hub for live streaming
-
 class StreamingClient {
     constructor(hubUrl, accessToken) {
         this.hubUrl = hubUrl;
@@ -309,6 +307,18 @@ class StreamingClient {
             let pc = this.consumerPcMapping?.get(producerUserId);
             let isNewConnection = false;
             
+            // If peer connection exists but is closed, remove it and create new one
+            if (pc && (pc.connectionState === 'closed' || pc.signalingState === 'closed')) {
+                console.log('Existing peer connection is closed, creating new one');
+                pc.close();
+                this.consumerPcMapping.delete(producerUserId);
+                // Also clean up pending candidates
+                if (this.pendingIceCandidates) {
+                    this.pendingIceCandidates.delete(producerUserId);
+                }
+                pc = null;
+            }
+            
             if (!pc) {
                 // Create NEW peer connection for this producer
                 pc = new RTCPeerConnection(this.configuration);
@@ -397,7 +407,7 @@ class StreamingClient {
                         const timeout = setTimeout(() => {
                             console.log('ICE gathering timeout - proceeding');
                             resolve();
-                        }, 8000);
+                        }, 3000);
                         
                         pc.addEventListener('icegatheringstatechange', () => {
                             console.log('ICE gathering state:', pc.iceGatheringState);
@@ -469,8 +479,27 @@ class StreamingClient {
     // Leave stream
     async leaveStream(roomId) {
         // Close all peer connections
-        this.peerConnections.forEach(pc => pc.close());
+        this.peerConnections.forEach(pc => {
+            if (pc && pc.connectionState !== 'closed') {
+                pc.close();
+            }
+        });
         this.peerConnections.clear();
+        
+        // Close consumer peer connections
+        if (this.consumerPcMapping) {
+            this.consumerPcMapping.forEach(pc => {
+                if (pc && pc.connectionState !== 'closed') {
+                    pc.close();
+                }
+            });
+            this.consumerPcMapping.clear();
+        }
+        
+        // Close producer peer connections  
+        if (this.producerPendingIce) {
+            this.producerPendingIce.clear();
+        }
 
         // Stop local tracks
         if (this.localStream) {
@@ -478,9 +507,19 @@ class StreamingClient {
             this.localStream = null;
         }
 
-        // Clear producers and consumers
+        // Clear all state
         this.producers.clear();
         this.consumers.clear();
+        
+        if (this.pendingIceCandidates) {
+            this.pendingIceCandidates.clear();
+        }
+        
+        if (this.producerTracks) {
+            this.producerTracks.clear();
+        }
+        
+        this.currentRoomId = null;
 
         await this.connection.invoke('LeaveStream', roomId);
     }
@@ -583,7 +622,7 @@ class StreamingClient {
                     const timeout = setTimeout(() => {
                         console.log('ICE gathering timeout - proceeding anyway');
                         resolve();
-                    }, 8000);
+                    }, 3000);
                     
                     pc.addEventListener('icegatheringstatechange', () => {
                         console.log('ICE gathering state:', pc.iceGatheringState);
