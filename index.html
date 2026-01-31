@@ -3,896 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Live Streaming</title>
+    <title>StreamSphere - Live Stream Platform</title>
     <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <!-- Login/Register Screen -->
-    <div id="loginContainer" class="login-container">
-        <div class="login-box">
-            <h1>Live Streaming</h1>
-            <p id="authSubtitle">Sign in to start or join a stream</p>
-            
-            <div id="loginError" class="error-message"></div>
-            <div id="registerSuccess" class="success-message"></div>
+    <div id="authContainer" class="auth-container">
+        <div class="auth-box">
+            <h1 class="auth-logo">STREAMSPHERE</h1>
+            <p id="authSubtitle" class="auth-subtitle">Sign in to start or join a stream</p>
             
             <!-- Login Form -->
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required autocomplete="username">
+            <form id="loginForm" class="auth-form">
+                <div class="input-group">
+                    <label for="loginUsername">Username</label>
+                    <input type="text" id="loginUsername" required autocomplete="username">
                 </div>
                 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                <div class="input-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required autocomplete="current-password">
                 </div>
                 
-                <button type="submit" class="primary" style="width: 100%;" id="loginBtn">
-                    Sign In
-                </button>
+                <button type="submit" class="btn-primary btn-full">Sign In</button>
                 
-                <p style="text-align: center; margin-top: 15px; color: #999; font-size: 14px;">
-                    Don't have an account? <a href="#" id="showRegisterLink" style="color: #ff0000; text-decoration: none;">Sign Up</a>
+                <p class="auth-switch">
+                    Don't have an account? <a href="#" id="showRegister">Sign Up</a>
                 </p>
             </form>
             
             <!-- Registration Form -->
-            <form id="registerForm" style="display: none;">
-                <div class="form-group">
+            <form id="registerForm" class="auth-form" style="display: none;">
+                <div class="input-group">
                     <label for="regEmail">Email</label>
-                    <input type="email" id="regEmail" name="email" required autocomplete="email">
+                    <input type="email" id="regEmail" required autocomplete="email">
                 </div>
                 
-                <div class="form-group">
+                <div class="input-group">
                     <label for="regUsername">Username</label>
-                    <input type="text" id="regUsername" name="username" required autocomplete="username">
+                    <input type="text" id="regUsername" required autocomplete="username">
                 </div>
                 
-                <div class="form-group">
+                <div class="input-group">
                     <label for="regFirstName">First Name</label>
-                    <input type="text" id="regFirstName" name="firstName" required autocomplete="given-name">
+                    <input type="text" id="regFirstName" required autocomplete="given-name">
                 </div>
                 
-                <div class="form-group">
+                <div class="input-group">
                     <label for="regLastName">Last Name</label>
-                    <input type="text" id="regLastName" name="lastName" required autocomplete="family-name">
+                    <input type="text" id="regLastName" required autocomplete="family-name">
                 </div>
                 
-                <div class="form-group">
+                <div class="input-group">
                     <label for="regPassword">Password</label>
-                    <input type="password" id="regPassword" name="password" required autocomplete="new-password">
+                    <input type="password" id="regPassword" required autocomplete="new-password">
                 </div>
                 
-                <div class="form-group">
+                <div class="input-group">
                     <label for="regConfirmPassword">Confirm Password</label>
-                    <input type="password" id="regConfirmPassword" name="confirmPassword" required autocomplete="new-password">
+                    <input type="password" id="regConfirmPassword" required autocomplete="new-password">
                 </div>
                 
-                <button type="submit" class="primary" style="width: 100%;" id="registerBtn">
-                    Sign Up
-                </button>
+                <button type="submit" class="btn-primary btn-full">Sign Up</button>
                 
-                <p style="text-align: center; margin-top: 15px; color: #999; font-size: 14px;">
-                    Already have an account? <a href="#" id="showLoginLink" style="color: #ff0000; text-decoration: none;">Sign In</a>
+                <p class="auth-switch">
+                    Already have an account? <a href="#" id="showLogin">Sign In</a>
                 </p>
             </form>
         </div>
     </div>
 
     <!-- Main Application -->
-    <div id="appContainer" class="container">
-        <div class="header">
-            <div class="header-left">
-                <div>
-                    <h1>Live Streaming</h1>
-                    <span id="streamStatus" class="status offline">Offline</span>
+    <div id="appContainer" class="app-container" style="display: none;">
+        <div class="content-wrapper">
+            <!-- Header -->
+            <header class="header">
+                <button class="back-btn" id="backBtn" style="visibility: hidden;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 18L9 12L15 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <h1 class="app-title">STREAMSPHERE</h1>
+                <button class="menu-btn" id="menuBtn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="5" r="1.5" fill="white"/>
+                        <circle cx="12" cy="12" r="1.5" fill="white"/>
+                        <circle cx="12" cy="19" r="1.5" fill="white"/>
+                    </svg>
+                </button>
+            </header>
+
+            <!-- Streams List Section (shown when not in a stream) -->
+            <div id="streamsListSection" class="streams-list-section">
+                <div class="streams-header">
+                    <h2>Active Live Streams</h2>
+                    <button class="btn-primary" id="startOwnStreamBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="3" fill="white"/>
+                        </svg>
+                        Start Your Stream
+                    </button>
                 </div>
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">U</div>
-                    <div class="user-details">
-                        <div class="user-name" id="userFullName">User</div>
-                        <div class="user-username" id="userUsername">@username</div>
+                <div id="activeStreamsList" class="active-streams-grid">
+                    <div class="no-streams">No active streams available</div>
+                </div>
+            </div>
+
+            <!-- Stream View (shown when in a stream) -->
+            <div id="streamViewSection" class="main-content" style="display: none;">
+                <!-- Video Section -->
+                <div class="video-section-container">
+                    <div class="video-container">
+                        <div class="video-player">
+                            <video id="localVideo" autoplay muted playsinline class="video-bg"></video>
+                            <div id="remoteVideosContainer" class="remote-videos-container"></div>
+                            <div class="video-overlay"></div>
+                            <div class="video-info">
+                                <h2 class="stream-title" id="streamTitle">Stream Title</h2>
+                                <button class="share-btn" id="shareBtn">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                        <path d="M8 12L8 4M8 4L5 7M8 4L11 7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                                        <path d="M16 12V20M16 20L19 17M16 20L13 17" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                                        <rect x="4" y="10" width="16" height="4" stroke="white" stroke-width="2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Stream Controls -->
+                        <div class="stream-controls">
+                            <div class="streamer-info">
+                                <div class="streamer-avatar-container">
+                                    <div class="streamer-avatar" id="streamerAvatar">U</div>
+                                    <span class="live-badge">LIVE</span>
+                                    <span class="online-indicator"></span>
+                                </div>
+                            </div>
+
+                            <div class="control-buttons">
+                                <button class="control-btn" id="toggleAudioBtn" style="display: none;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M15.54 8.46C16.4774 9.39764 17.0039 10.6692 17.0039 11.995C17.0039 13.3208 16.4774 14.5924 15.54 15.53" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>MUTE</span>
+                                </button>
+                                
+                                <button class="control-btn" id="toggleVideoBtn" style="display: none;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <rect x="2" y="6" width="16" height="12" rx="2" stroke="white" stroke-width="2"/>
+                                        <path d="M18 10L22 7V17L18 14V10Z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>STOP VIDEO</span>
+                                </button>
+
+                                <button class="control-btn start-media-btn" id="startMediaBtn" style="display: none;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+                                        <circle cx="12" cy="12" r="3" fill="white"/>
+                                    </svg>
+                                    <span>START</span>
+                                </button>
+                                
+                                <button class="control-btn leave-btn" id="leaveStreamBtn">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M16 17L21 12L16 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M21 12H9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>LEAVE</span>
+                                </button>
+
+                                <button class="control-btn end-stream-btn" id="endStreamBtn" style="display: none;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    <span>END STREAM</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Viewers Section (Desktop) -->
+                    <div class="viewers-section desktop-only">
+                        <div class="viewers-header">
+                            <h3>Viewers</h3>
+                            <span class="viewer-count" id="viewerCountBadge">0</span>
+                        </div>
+                        <div id="viewersList" class="viewers-list"></div>
                     </div>
                 </div>
-            </div>
-            <div class="controls">
-                <button id="startStreamBtn" class="primary">Start Stream</button>
-                <button id="startMediaBtn" class="secondary" disabled>Start Camera/Mic</button>
-                <button id="toggleAudioBtn" class="secondary" disabled>Mute Audio</button>
-                <button id="toggleVideoBtn" class="secondary" disabled>Stop Video</button>
-                <button id="leaveBtn" class="secondary" disabled>Leave</button>
-                <button id="endStreamBtn" class="primary" disabled>End Stream</button>
-                <button id="logoutBtn" class="secondary">Logout</button>
-            </div>
-        </div>
 
-        <!-- Active Streams List -->
-        <div id="streamsListContainer" class="streams-list-container">
-            <h3>Active Live Streams</h3>
-            <div id="streamsList" class="streams-list">
-                <div class="no-streams">No active streams available</div>
-            </div>
-        </div>
+                <!-- Chat Section -->
+                <div class="chat-section">
+                    <!-- Stats Bar -->
+                    <div class="stats-bar">
+                        <div class="stat-item">
+                            <span class="stat-label">Viewers</span>
+                            <span class="stat-value" id="viewerCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Duration</span>
+                            <span class="stat-value" id="streamDuration">00:00</span>
+                        </div>
+                    </div>
 
-        <div class="stats">
-            <h3 style="margin-bottom: 10px;">Stream Statistics</h3>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value" id="viewerCount">0</div>
-                    <div class="stat-label">Viewers</div>
+                    <!-- Chat Messages -->
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-welcome">
+                            <p>Welcome to the chat! Be respectful and enjoy the stream.</p>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input -->
+                    <div class="chat-input-container">
+                        <input type="text" class="chat-input" placeholder="Say something..." id="chatInput">
+                        <button class="send-btn" id="sendMessageBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M22 2L11 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="participantCount">0</div>
-                    <div class="stat-label">Participants</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="streamDuration">00:00</div>
-                    <div class="stat-label">Duration</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="video-container">
-            <div class="video-wrapper">
-                <video id="localVideo" autoplay muted playsinline></video>
-                <div class="video-label">You (Local)</div>
-            </div>
-            <div id="remoteVideos"></div>
-        </div>
-
-        <div class="participants">
-            <h3>Participants</h3>
-            <div id="participantList" class="participant-list"></div>
-        </div>
-
-        <div class="chat-container">
-            <h3 style="margin-bottom: 10px;">Chat</h3>
-            <div id="messages" class="messages"></div>
-            <div class="chat-input">
-                <input type="text" id="messageInput" placeholder="Type a message..." disabled>
-                <button id="sendMessageBtn" class="primary" disabled>Send</button>
             </div>
         </div>
     </div>
-    
+
+    <!-- Menu Modal -->
+    <div id="menuModal" class="modal" style="display: none;">
+        <div class="modal-content menu-modal">
+            <div class="menu-header">
+                <h3>Menu</h3>
+                <button class="close-modal" id="closeMenuModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="menu-items">
+                <div class="user-menu-info">
+                    <div class="user-menu-avatar" id="menuUserAvatar">U</div>
+                    <div class="user-menu-details">
+                        <div class="user-menu-name" id="menuUserName">User Name</div>
+                        <div class="user-menu-username" id="menuUserUsername">@username</div>
+                    </div>
+                </div>
+                <button class="menu-item" id="logoutBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Stream Modal -->
+    <div id="startStreamModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Start Your Stream</h3>
+                <button class="close-modal" id="closeStartStreamModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="startStreamForm" class="modal-form">
+                <div class="input-group">
+                    <label for="streamTitle">Stream Title</label>
+                    <input type="text" id="streamTitleInput" required maxlength="100">
+                </div>
+                <div class="input-group">
+                    <label for="streamDescription">Description</label>
+                    <textarea id="streamDescription" rows="3" maxlength="500"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="streamCategory">Category</label>
+                    <select id="streamCategory">
+                        <option value="General">General</option>
+                        <option value="Music">Music</option>
+                        <option value="Gaming">Gaming</option>
+                        <option value="Education">Education</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="stream-type-selector">
+                    <label>Stream Type</label>
+                    <div class="stream-type-options">
+                        <label class="stream-type-option">
+                            <input type="radio" name="streamType" value="audio" checked>
+                            <span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 1C12 1 8 4 8 8V12C8 16 12 19 12 19M12 1C12 1 16 4 16 8V12C16 16 12 19 12 19M12 1V19M12 19V23M8 23H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Audio Only
+                            </span>
+                        </label>
+                        <label class="stream-type-option">
+                            <input type="radio" name="streamType" value="video">
+                            <span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <rect x="2" y="6" width="16" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M18 10L22 7V17L18 14V10Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                </svg>
+                                Video Stream
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary btn-full">Start Broadcasting</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Viewers Modal (Mobile) -->
+    <div id="viewersModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Viewers <span class="viewer-count-modal" id="viewerCountModal">0</span></h3>
+                <button class="close-modal" id="closeViewersModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="viewersModalList" class="viewers-modal-list"></div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script src="./js/streaming-client.js"></script>
-    <script>
-        // Configuration
-        const API_URL = 'https://wemu.onrender.com';
-        const LOGIN_ENDPOINT = '/api/Auth/login';
-        const REGISTER_ENDPOINT = '/api/Auth/register';
-        const STREAMS_LIST_ENDPOINT = '/api/Streams/active';
-        
-        // User session
-        let currentUser = null;
-        let accessToken = null;
-        
-        // Streaming client
-        let client;
-        let currentRoomId = null;
-        let isHost = false;
-        let streamStartTime = null;
-        let durationInterval = null;
-        let audioProducerId = null;
-        let videoProducerId = null;
-        let audioEnabled = true;
-        let videoEnabled = true;
-        let streamsListInterval = null;
-
-        // DOM elements - Auth
-        const loginContainer = document.getElementById('loginContainer');
-        const appContainer = document.getElementById('appContainer');
-        const authSubtitle = document.getElementById('authSubtitle');
-        const loginForm = document.getElementById('loginForm');
-        const registerForm = document.getElementById('registerForm');
-        const loginError = document.getElementById('loginError');
-        const registerSuccess = document.getElementById('registerSuccess');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const showRegisterLink = document.getElementById('showRegisterLink');
-        const showLoginLink = document.getElementById('showLoginLink');
-        
-        // Login inputs
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        
-        // Register inputs
-        const regEmailInput = document.getElementById('regEmail');
-        const regUsernameInput = document.getElementById('regUsername');
-        const regFirstNameInput = document.getElementById('regFirstName');
-        const regLastNameInput = document.getElementById('regLastName');
-        const regPasswordInput = document.getElementById('regPassword');
-        const regConfirmPasswordInput = document.getElementById('regConfirmPassword');
-
-        // DOM elements - App
-        const userAvatar = document.getElementById('userAvatar');
-        const userFullName = document.getElementById('userFullName');
-        const userUsername = document.getElementById('userUsername');
-        const startStreamBtn = document.getElementById('startStreamBtn');
-        const startMediaBtn = document.getElementById('startMediaBtn');
-        const toggleAudioBtn = document.getElementById('toggleAudioBtn');
-        const toggleVideoBtn = document.getElementById('toggleVideoBtn');
-        const leaveBtn = document.getElementById('leaveBtn');
-        const endStreamBtn = document.getElementById('endStreamBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const messageInput = document.getElementById('messageInput');
-        const sendMessageBtn = document.getElementById('sendMessageBtn');
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideos = document.getElementById('remoteVideos');
-        const messages = document.getElementById('messages');
-        const streamStatus = document.getElementById('streamStatus');
-        const viewerCount = document.getElementById('viewerCount');
-        const participantCount = document.getElementById('participantCount');
-        const streamDuration = document.getElementById('streamDuration');
-        const participantList = document.getElementById('participantList');
-        const streamsListContainer = document.getElementById('streamsListContainer');
-        const streamsList = document.getElementById('streamsList');
-
-        // Toggle between login and register forms
-        showRegisterLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginForm.style.display = 'none';
-            registerForm.style.display = 'block';
-            authSubtitle.textContent = 'Create an account to get started';
-            hideLoginError();
-            hideRegisterSuccess();
-        });
-
-        showLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            registerForm.style.display = 'none';
-            loginForm.style.display = 'block';
-            authSubtitle.textContent = 'Sign in to start or join a stream';
-            hideLoginError();
-            hideRegisterSuccess();
-        });
-
-        // Login handler
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value;
-            
-            if (!username || !password) {
-                showLoginError('Please enter both username and password');
-                return;
-            }
-            
-            await login(username, password);
-        });
-
-        // Registration handler
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = regEmailInput.value.trim();
-            const username = regUsernameInput.value.trim();
-            const firstName = regFirstNameInput.value.trim();
-            const lastName = regLastNameInput.value.trim();
-            const password = regPasswordInput.value;
-            const confirmPassword = regConfirmPasswordInput.value;
-            
-            if (!email || !username || !firstName || !lastName || !password || !confirmPassword) {
-                showLoginError('Please fill in all fields');
-                return;
-            }
-            
-            if (password !== confirmPassword) {
-                showLoginError('Passwords do not match');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showLoginError('Password must be at least 6 characters');
-                return;
-            }
-            
-            await register(email, username, firstName, lastName, password);
-        });
-
-        async function register(email, username, firstName, lastName, password) {
-            try {
-                registerBtn.disabled = true;
-                registerBtn.textContent = 'Creating Account...';
-                hideLoginError();
-                hideRegisterSuccess();
-                
-                const response = await fetch(`${API_URL}${REGISTER_ENDPOINT}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        username: username,
-                        firstName: firstName,
-                        lastName: lastName,
-                        password: password
-                    })
-                });
-                
-                const result = await response.json();
-
-                if (!response.ok || !result?.id) {
-                    throw new Error('Registration failed');
-                }
-
-                showRegisterSuccess('Account created successfully! Please sign in.');
-                
-                registerForm.reset();
-                
-                setTimeout(() => {
-                    registerForm.style.display = 'none';
-                    loginForm.style.display = 'block';
-                    authSubtitle.textContent = 'Sign in to start or join a stream';
-                    hideRegisterSuccess();
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Registration error:', error);
-                showLoginError(error.message || 'Failed to create account. Please try again.');
-            } finally {
-                registerBtn.disabled = false;
-                registerBtn.textContent = 'Sign Up';
-            }
-        }
-
-        async function login(username, password) {
-            try {
-                loginBtn.disabled = true;
-                loginBtn.textContent = 'Signing in...';
-                hideLoginError();
-                
-                const response = await fetch(`${API_URL}${LOGIN_ENDPOINT}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        userName: username,
-                        password: password
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Login failed');
-                }
-                
-                currentUser = {
-                    id: result.data.id,
-                    username: result.data.userName,
-                    firstName: result.data.firstName,
-                    lastName: result.data.lastName
-                };
-                accessToken = result.data.token;
-                
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                localStorage.setItem('token', accessToken);
-                
-                await initializeApp();
-                
-            } catch (error) {
-                console.error('Login error:', error);
-                showLoginError(error.message || 'Failed to login. Please try again.');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Sign In';
-            }
-        }
-
-        function showLoginError(message) {
-            loginError.textContent = message;
-            loginError.style.display = 'block';
-        }
-
-        function hideLoginError() {
-            loginError.style.display = 'none';
-        }
-
-        function showRegisterSuccess(message) {
-            registerSuccess.textContent = message;
-            registerSuccess.style.display = 'block';
-        }
-
-        function hideRegisterSuccess() {
-            registerSuccess.style.display = 'none';
-        }
-
-        async function initializeApp() {
-            loginContainer.style.display = 'none';
-            appContainer.style.display = 'block';
-            
-            const initials = (currentUser.firstName[0] + currentUser.lastName[0]).toUpperCase();
-            userAvatar.textContent = initials;
-            userFullName.textContent = `${currentUser.firstName} ${currentUser.lastName}`;
-            userUsername.textContent = `@${currentUser.username}`;
-            
-            await initStreamingClient();
-            showStreamsList();
-            startStreamsListPolling();
-        }
-
-        async function initStreamingClient() {
-            client = new StreamingClient(API_URL, accessToken);
-            
-            client.onStreamStarted = handleStreamStarted;
-            client.onJoinedStream = handleJoinedStream;
-            client.onUserJoined = handleUserJoined;
-            client.onUserLeft = handleUserLeft;
-            client.onMessageReceived = handleMessageReceived;
-            client.onStreamEnded = handleStreamEnded;
-            client.onRemoteStream = handleRemoteStream;
-            client.onProducerPaused = handleProducerPaused;
-            client.onProducerResumed = handleProducerResumed;
-            client.onProducerClosed = handleProducerClosed;
-            client.onNewProducer = handleNewProducer;
-
-            try {
-                await client.connect();
-                console.log('Connected to streaming hub');
-            } catch (error) {
-                console.error('Failed to connect:', error);
-                alert('Failed to connect to streaming service. Please try again.');
-            }
-        }
-
-        async function fetchActiveStreams() {
-            try {
-                const response = await fetch(`${API_URL}${STREAMS_LIST_ENDPOINT}`, {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const streams = await response.json();
-                    return streams;
-                }
-            } catch (error) {
-                console.error('Error fetching streams:', error);
-            }
-            return [];
-        }
-
-        async function displayStreamsList() {
-            const streams = await fetchActiveStreams();
-            
-            if (streams.length === 0) {
-                streamsList.innerHTML = '<div class="no-streams">No active streams available</div>';
-                return;
-            }
-            
-            streamsList.innerHTML = '';
-            
-            streams.forEach(stream => {
-                const streamCard = document.createElement('div');
-                streamCard.className = 'stream-card';
-                
-                const duration = calculateDuration(stream.startTime);
-                
-                streamCard.innerHTML = `
-                    <div class="stream-card-header">
-                        <span class="stream-live-badge">LIVE</span>
-                        <span class="stream-viewers">${stream.currentViewers} viewers</span>
-                    </div>
-                    <div class="stream-card-body">
-                        <h4 class="stream-title">${escapeHtml(stream.title)}</h4>
-                        <p class="stream-description">${escapeHtml(stream.description)}</p>
-                        <div class="stream-meta">
-                            <span class="stream-host">🎙️ ${escapeHtml(stream.host.username)}</span>
-                            <span class="stream-duration">⏱️ ${duration}</span>
-                            <span class="stream-category">📁 ${escapeHtml(stream.category)}</span>
-                        </div>
-                    </div>
-                    <button class="join-stream-btn primary" data-roomid="${stream.roomId}">
-                        Join Stream
-                    </button>
-                `;
-                
-                const joinBtn = streamCard.querySelector('.join-stream-btn');
-                joinBtn.addEventListener('click', () => {
-                    joinStreamById(stream.roomId);
-                });
-                
-                streamsList.appendChild(streamCard);
-            });
-        }
-
-        function calculateDuration(startTime) {
-            const start = new Date(startTime);
-            const now = new Date();
-            const diff = Math.floor((now - start) / 1000);
-            
-            const hours = Math.floor(diff / 3600);
-            const minutes = Math.floor((diff % 3600) / 60);
-            const seconds = diff % 60;
-            
-            if (hours > 0) {
-                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        function showStreamsList() {
-            streamsListContainer.style.display = 'block';
-            displayStreamsList();
-        }
-
-        function hideStreamsList() {
-            streamsListContainer.style.display = 'none';
-        }
-
-        function startStreamsListPolling() {
-            if (streamsListInterval) {
-                clearInterval(streamsListInterval);
-            }
-            
-            streamsListInterval = setInterval(() => {
-                if (!currentRoomId && streamsListContainer.style.display !== 'none') {
-                    displayStreamsList();
-                }
-            }, 5000);
-        }
-
-        function stopStreamsListPolling() {
-            if (streamsListInterval) {
-                clearInterval(streamsListInterval);
-                streamsListInterval = null;
-            }
-        }
-
-        async function joinStreamById(roomId) {
-            await client.joinStream(roomId, currentUser.id, currentUser.username);
-        }
-
-        function handleStreamStarted(data) {
-            currentRoomId = data.data.stream.roomid;
-            isHost = true;
-            streamStartTime = new Date(data.data.status.start_time);
-            updateStreamStatus('live');
-            hideStreamsList();
-            updateButtons();
-            startDurationTimer();
-            addSystemMessage(`Stream started: ${data.data.stream.title}`);
-        }
-
-        function handleJoinedStream(data) {
-            currentRoomId = data.data.stream.roomid;
-            client.currentRoomId = currentRoomId;
-            streamStartTime = new Date(data.data.status.start_time);
-            updateStreamStatus('live');
-            hideStreamsList();
-            updateButtons();
-            startDurationTimer();
-            
-            viewerCount.textContent = data.data.status.current_viewers;
-            participantCount.textContent = data.data.participants.total_members;
-            updateParticipantList(data.data.participants.users_list);
-            
-            console.log('Joined stream, existing producers:', data.data.existing_producers);
-        }
-
-        function handleUserJoined(data) {
-            viewerCount.textContent = data.current_viewers;
-            participantCount.textContent = data.total_members;
-            updateParticipantList(data.participants);
-            addSystemMessage(data.message);
-        }
-
-        function handleUserLeft(data) {
-            viewerCount.textContent = data.current_viewers;
-            participantCount.textContent = data.total_members;
-            updateParticipantList(data.participants);
-            addSystemMessage(data.message);
-        }
-
-        function handleMessageReceived(data) {
-            if (data.type === 'system') {
-                addSystemMessage(data.content);
-            } else {
-                addMessage(data.sender.username, data.content, data.timestamp);
-            }
-        }
-
-        function handleStreamEnded(data) {
-            addSystemMessage(data.message);
-            cleanup();
-        }
-
-        function handleRemoteStream(stream, producerUserId, kind) {
-            console.log('handleRemoteStream called:', { producerUserId, kind, stream });
-            
-            let videoElement = document.getElementById(`remote-${producerUserId}`);
-            
-            if (!videoElement) {
-                videoElement = document.createElement('video');
-                videoElement.id = `remote-${producerUserId}`;
-                videoElement.autoplay = true;
-                videoElement.playsinline = true;
-                videoElement.setAttribute('playsinline', '');
-                videoElement.setAttribute('webkit-playsinline', '');
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'video-wrapper';
-                wrapper.id = `wrapper-${producerUserId}`;
-                
-                const label = document.createElement('div');
-                label.className = 'video-label';
-                label.textContent = `Remote Stream`;
-                
-                wrapper.appendChild(videoElement);
-                wrapper.appendChild(label);
-                remoteVideos.appendChild(wrapper);
-                
-                console.log('Created new video element for producer', producerUserId);
-            }
-            
-            if (!videoElement.srcObject) {
-                videoElement.srcObject = stream;
-                videoElement.play().catch(err => {
-                    console.error('Error playing video:', err);
-                });
-                console.log('Set stream on video element');
-            } else {
-                console.log('Video element already has stream');
-            }
-            
-            stream.getTracks().forEach(track => {
-                console.log(`Stream has ${track.kind} track:`, track.id, 'enabled:', track.enabled, 'muted:', track.muted);
-            });
-        }
-
-        function handleProducerPaused(data) {
-            addSystemMessage(`${data.kind} paused`);
-        }
-
-        function handleProducerResumed(data) {
-            addSystemMessage(`${data.kind} resumed`);
-        }
-
-        function handleProducerClosed(data) {
-            const wrapper = document.getElementById(`wrapper-${data.producerId}`);
-            if (wrapper) wrapper.remove();
-        }
-
-        function handleNewProducer(data) {
-            console.log('New producer detected:', data);
-            if (client && client.currentRoomId) {
-                client.consumeMedia(client.currentRoomId, data.producerId);
-            }
-        }
-
-        // Button handlers
-        startStreamBtn.onclick = async () => {
-            const title = prompt('Stream title:', 'My Live Stream');
-            if (!title) return;
-            
-            const description = prompt('Description:', 'Live streaming session');
-            await client.startStream(currentUser.username, currentUser.id, title, description, 'General', 'public', 'video');
-        };
-
-        startMediaBtn.onclick = async () => {
-            try {
-                const localStream = await client.startProducing(currentRoomId, { video: true, audio: true });
-                localVideo.srcObject = localStream;
-                
-                const producers = Array.from(client.producers.entries());
-                audioProducerId = producers.find(([id, kind]) => kind === 'audio')?.[0];
-                videoProducerId = producers.find(([id, kind]) => kind === 'video')?.[0];
-                
-                updateButtons();
-            } catch (err) {
-                alert('Failed to start media: ' + err.message);
-            }
-        };
-
-        toggleAudioBtn.onclick = async () => {
-            if (audioProducerId) {
-                if (audioEnabled) {
-                    await client.pauseProducer(currentRoomId, audioProducerId);
-                    toggleAudioBtn.textContent = 'Unmute Audio';
-                } else {
-                    await client.resumeProducer(currentRoomId, audioProducerId);
-                    toggleAudioBtn.textContent = 'Mute Audio';
-                }
-                audioEnabled = !audioEnabled;
-            }
-        };
-
-        toggleVideoBtn.onclick = async () => {
-            if (videoProducerId) {
-                if (videoEnabled) {
-                    await client.pauseProducer(currentRoomId, videoProducerId);
-                    toggleVideoBtn.textContent = 'Start Video';
-                } else {
-                    await client.resumeProducer(currentRoomId, videoProducerId);
-                    toggleVideoBtn.textContent = 'Stop Video';
-                }
-                videoEnabled = !videoEnabled;
-            }
-        };
-
-        leaveBtn.onclick = async () => {
-            if (confirm('Are you sure you want to leave?')) {
-                await client.leaveStream(currentRoomId);
-                cleanup();
-            }
-        };
-
-        endStreamBtn.onclick = async () => {
-            if (confirm('Are you sure you want to end the stream?')) {
-                await client.endStream(currentRoomId);
-                cleanup();
-            }
-        };
-
-        logoutBtn.onclick = () => {
-            if (currentRoomId && !confirm('You are currently in a stream. Are you sure you want to logout?')) {
-                return;
-            }
-            logout();
-        };
-
-        sendMessageBtn.onclick = async () => {
-            const message = messageInput.value.trim();
-            if (message) {
-                await client.sendMessage(currentRoomId, message);
-                messageInput.value = '';
-            }
-        };
-
-        messageInput.onkeypress = (e) => {
-            if (e.key === 'Enter') sendMessageBtn.click();
-        };
-
-        function logout() {
-            if (currentRoomId && client) {
-                client.leaveStream(currentRoomId).catch(console.error);
-            }
-            
-            if (client) client.disconnect();
-            
-            stopStreamsListPolling();
-            
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            currentUser = null;
-            accessToken = null;
-            
-            cleanup();
-            appContainer.style.display = 'none';
-            loginContainer.style.display = 'flex';
-            loginForm.reset();
-            registerForm.reset();
-        }
-
-        function updateStreamStatus(status) {
-            if (status === 'live') {
-                streamStatus.textContent = 'LIVE';
-                streamStatus.className = 'status live';
-            } else {
-                streamStatus.textContent = 'Offline';
-                streamStatus.className = 'status offline';
-            }
-        }
-
-        function updateButtons() {
-            const inStream = currentRoomId !== null;
-            const hasMedia = client && client.producers.size > 0;
-            
-            startStreamBtn.disabled = inStream;
-            startMediaBtn.disabled = !inStream || hasMedia || !isHost;
-            toggleAudioBtn.disabled = !hasMedia;
-            toggleVideoBtn.disabled = !hasMedia;
-            leaveBtn.disabled = !inStream;
-            endStreamBtn.disabled = !inStream || !isHost;
-            messageInput.disabled = !inStream;
-            sendMessageBtn.disabled = !inStream;
-        }
-
-        function addMessage(sender, content, timestamp) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            const time = new Date(timestamp).toLocaleTimeString();
-            
-            messageDiv.innerHTML = `
-                <div class="message-sender">${escapeHtml(sender)}</div>
-                <div class="message-content">${escapeHtml(content)}</div>
-                <div class="message-time">${time}</div>
-            `;
-            
-            messages.appendChild(messageDiv);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function addSystemMessage(content) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message system';
-            messageDiv.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
-            messages.appendChild(messageDiv);
-            messages.scrollTop = messages.scrollHeight;
-        }
-
-        function updateParticipantList(participants) {
-            participantList.innerHTML = '';
-            participants.forEach(p => {
-                const div = document.createElement('div');
-                div.className = 'participant';
-                div.innerHTML = `
-                    <span class="participant-name">${escapeHtml(p.username)}</span>
-                    <span class="role-badge ${p.role}">${p.role}</span>
-                `;
-                participantList.appendChild(div);
-            });
-        }
-
-        function startDurationTimer() {
-            if (durationInterval) clearInterval(durationInterval);
-            
-            durationInterval = setInterval(() => {
-                if (streamStartTime) {
-                    const elapsed = Math.floor((Date.now() - streamStartTime.getTime()) / 1000);
-                    const minutes = Math.floor(elapsed / 60);
-                    const seconds = elapsed % 60;
-                    streamDuration.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                }
-            }, 1000);
-        }
-
-        function cleanup() {
-            currentRoomId = null;
-            isHost = false;
-            streamStartTime = null;
-            audioProducerId = null;
-            videoProducerId = null;
-            audioEnabled = true;
-            videoEnabled = true;
-            
-            if (durationInterval) {
-                clearInterval(durationInterval);
-                durationInterval = null;
-            }
-            
-            localVideo.srcObject = null;
-            remoteVideos.innerHTML = '';
-            participantList.innerHTML = '';
-            viewerCount.textContent = '0';
-            participantCount.textContent = '0';
-            streamDuration.textContent = '00:00';
-            
-            updateStreamStatus('offline');
-            updateButtons();
-            showStreamsList();
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Check for existing session
-        window.addEventListener('load', () => {
-            const savedUser = localStorage.getItem('user');
-            const savedToken = localStorage.getItem('token');
-            
-            if (savedUser && savedToken) {
-                try {
-                    currentUser = JSON.parse(savedUser);
-                    accessToken = savedToken;
-                    initializeApp();
-                } catch (error) {
-                    console.error('Failed to restore session:', error);
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('token');
-                }
-            }
-        });
-    </script>
+    <script src="./js/app.js"></script>
 </body>
 </html>
