@@ -98,13 +98,20 @@
             </div>
             <div class="controls">
                 <button id="startStreamBtn" class="primary">Start Stream</button>
-                <button id="joinStreamBtn" class="secondary">Join Stream</button>
                 <button id="startMediaBtn" class="secondary" disabled>Start Camera/Mic</button>
                 <button id="toggleAudioBtn" class="secondary" disabled>Mute Audio</button>
                 <button id="toggleVideoBtn" class="secondary" disabled>Stop Video</button>
                 <button id="leaveBtn" class="secondary" disabled>Leave</button>
                 <button id="endStreamBtn" class="primary" disabled>End Stream</button>
                 <button id="logoutBtn" class="secondary">Logout</button>
+            </div>
+        </div>
+
+        <!-- Active Streams List -->
+        <div id="streamsListContainer" class="streams-list-container">
+            <h3>Active Live Streams</h3>
+            <div id="streamsList" class="streams-list">
+                <div class="no-streams">No active streams available</div>
             </div>
         </div>
 
@@ -152,10 +159,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
     <script src="./js/streaming-client.js"></script>
     <script>
-        // Configuration - UPDATE THESE VALUES
+        // Configuration
         const API_URL = 'https://wemu.onrender.com';
         const LOGIN_ENDPOINT = '/api/Auth/login';
         const REGISTER_ENDPOINT = '/api/Auth/register';
+        const STREAMS_LIST_ENDPOINT = '/api/Streams/active';
         
         // User session
         let currentUser = null;
@@ -171,6 +179,7 @@
         let videoProducerId = null;
         let audioEnabled = true;
         let videoEnabled = true;
+        let streamsListInterval = null;
 
         // DOM elements - Auth
         const loginContainer = document.getElementById('loginContainer');
@@ -202,7 +211,6 @@
         const userFullName = document.getElementById('userFullName');
         const userUsername = document.getElementById('userUsername');
         const startStreamBtn = document.getElementById('startStreamBtn');
-        const joinStreamBtn = document.getElementById('joinStreamBtn');
         const startMediaBtn = document.getElementById('startMediaBtn');
         const toggleAudioBtn = document.getElementById('toggleAudioBtn');
         const toggleVideoBtn = document.getElementById('toggleVideoBtn');
@@ -219,6 +227,8 @@
         const participantCount = document.getElementById('participantCount');
         const streamDuration = document.getElementById('streamDuration');
         const participantList = document.getElementById('participantList');
+        const streamsListContainer = document.getElementById('streamsListContainer');
+        const streamsList = document.getElementById('streamsList');
 
         // Toggle between login and register forms
         showRegisterLink.addEventListener('click', (e) => {
@@ -310,13 +320,10 @@
                     throw new Error('Registration failed');
                 }
 
-                // Show success message
                 showRegisterSuccess('Account created successfully! Please sign in.');
                 
-                // Clear form
                 registerForm.reset();
                 
-                // Switch to login form after 2 seconds
                 setTimeout(() => {
                     registerForm.style.display = 'none';
                     loginForm.style.display = 'block';
@@ -406,6 +413,8 @@
             userUsername.textContent = `@${currentUser.username}`;
             
             await initStreamingClient();
+            showStreamsList();
+            startStreamsListPolling();
         }
 
         async function initStreamingClient() {
@@ -432,11 +441,121 @@
             }
         }
 
+        async function fetchActiveStreams() {
+            try {
+                const response = await fetch(`${API_URL}${STREAMS_LIST_ENDPOINT}`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const streams = await response.json();
+                    return streams;
+                }
+            } catch (error) {
+                console.error('Error fetching streams:', error);
+            }
+            return [];
+        }
+
+        async function displayStreamsList() {
+            const streams = await fetchActiveStreams();
+            
+            if (streams.length === 0) {
+                streamsList.innerHTML = '<div class="no-streams">No active streams available</div>';
+                return;
+            }
+            
+            streamsList.innerHTML = '';
+            
+            streams.forEach(stream => {
+                const streamCard = document.createElement('div');
+                streamCard.className = 'stream-card';
+                
+                const duration = calculateDuration(stream.startTime);
+                
+                streamCard.innerHTML = `
+                    <div class="stream-card-header">
+                        <span class="stream-live-badge">LIVE</span>
+                        <span class="stream-viewers">${stream.currentViewers} viewers</span>
+                    </div>
+                    <div class="stream-card-body">
+                        <h4 class="stream-title">${escapeHtml(stream.title)}</h4>
+                        <p class="stream-description">${escapeHtml(stream.description)}</p>
+                        <div class="stream-meta">
+                            <span class="stream-host">🎙️ ${escapeHtml(stream.host.username)}</span>
+                            <span class="stream-duration">⏱️ ${duration}</span>
+                            <span class="stream-category">📁 ${escapeHtml(stream.category)}</span>
+                        </div>
+                    </div>
+                    <button class="join-stream-btn primary" data-roomid="${stream.roomId}">
+                        Join Stream
+                    </button>
+                `;
+                
+                const joinBtn = streamCard.querySelector('.join-stream-btn');
+                joinBtn.addEventListener('click', () => {
+                    joinStreamById(stream.roomId);
+                });
+                
+                streamsList.appendChild(streamCard);
+            });
+        }
+
+        function calculateDuration(startTime) {
+            const start = new Date(startTime);
+            const now = new Date();
+            const diff = Math.floor((now - start) / 1000);
+            
+            const hours = Math.floor(diff / 3600);
+            const minutes = Math.floor((diff % 3600) / 60);
+            const seconds = diff % 60;
+            
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function showStreamsList() {
+            streamsListContainer.style.display = 'block';
+            displayStreamsList();
+        }
+
+        function hideStreamsList() {
+            streamsListContainer.style.display = 'none';
+        }
+
+        function startStreamsListPolling() {
+            if (streamsListInterval) {
+                clearInterval(streamsListInterval);
+            }
+            
+            streamsListInterval = setInterval(() => {
+                if (!currentRoomId && streamsListContainer.style.display !== 'none') {
+                    displayStreamsList();
+                }
+            }, 5000);
+        }
+
+        function stopStreamsListPolling() {
+            if (streamsListInterval) {
+                clearInterval(streamsListInterval);
+                streamsListInterval = null;
+            }
+        }
+
+        async function joinStreamById(roomId) {
+            await client.joinStream(roomId, currentUser.id, currentUser.username);
+        }
+
         function handleStreamStarted(data) {
             currentRoomId = data.data.stream.roomid;
             isHost = true;
             streamStartTime = new Date(data.data.status.start_time);
             updateStreamStatus('live');
+            hideStreamsList();
             updateButtons();
             startDurationTimer();
             addSystemMessage(`Stream started: ${data.data.stream.title}`);
@@ -447,6 +566,7 @@
             client.currentRoomId = currentRoomId;
             streamStartTime = new Date(data.data.status.start_time);
             updateStreamStatus('live');
+            hideStreamsList();
             updateButtons();
             startDurationTimer();
             
@@ -556,12 +676,6 @@
             await client.startStream(currentUser.username, currentUser.id, title, description, 'General', 'public', 'video');
         };
 
-        joinStreamBtn.onclick = async () => {
-            const roomId = prompt('Enter Room ID:');
-            if (!roomId) return;
-            await client.joinStream(roomId, currentUser.id, currentUser.username);
-        };
-
         startMediaBtn.onclick = async () => {
             try {
                 const localStream = await client.startProducing(currentRoomId, { video: true, audio: true });
@@ -643,6 +757,8 @@
             
             if (client) client.disconnect();
             
+            stopStreamsListPolling();
+            
             localStorage.removeItem('user');
             localStorage.removeItem('token');
             currentUser = null;
@@ -670,7 +786,6 @@
             const hasMedia = client && client.producers.size > 0;
             
             startStreamBtn.disabled = inStream;
-            joinStreamBtn.disabled = inStream;
             startMediaBtn.disabled = !inStream || hasMedia || !isHost;
             toggleAudioBtn.disabled = !hasMedia;
             toggleVideoBtn.disabled = !hasMedia;
@@ -752,6 +867,7 @@
             
             updateStreamStatus('offline');
             updateButtons();
+            showStreamsList();
         }
 
         function escapeHtml(text) {
