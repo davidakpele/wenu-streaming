@@ -767,7 +767,7 @@ class StreamingClient {
         }
     }
 
-    onStreamStarted(data) {}
+onStreamStarted(data) {}
 onJoinedStream(data) {}
 onUserJoined(data) {}
 onUserLeft(data) {}

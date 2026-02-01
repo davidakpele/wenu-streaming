@@ -22,6 +22,7 @@ let currentStreamType = 'audio';
 let blockedUsers = new Set(); // Track blocked users
 let selectedUserForActions = null; // Track user selected for actions
 let cohostProducers = new Map(); // Track co-host media producers
+let currentMobileView = 'stream'; // Track current mobile view
 
 // DOM Elements
 const authContainer = document.getElementById('authContainer');
@@ -39,6 +40,18 @@ const activeStreamsList = document.getElementById('activeStreamsList');
 const startOwnStreamBtn = document.getElementById('startOwnStreamBtn');
 const backBtn = document.getElementById('backBtn');
 const menuBtn = document.getElementById('menuBtn');
+
+// Mobile Navigation
+const mobileNav = document.getElementById('mobileNav');
+const navStreamBtn = document.getElementById('navStreamBtn');
+const navProfileBtn = document.getElementById('navProfileBtn');
+const navViewersBtn = document.getElementById('navViewersBtn');
+const navSettingsBtn = document.getElementById('navSettingsBtn');
+
+// Mobile Views
+const profileView = document.getElementById('profileView');
+const settingsView = document.getElementById('settingsView');
+const mobileViewersView = document.getElementById('mobileViewersView');
 
 // Menu Modal
 const menuModal = document.getElementById('menuModal');
@@ -68,6 +81,7 @@ const cohostVideoLabel = document.getElementById('cohostVideoLabel');
 const toggleAudioBtn = document.getElementById('toggleAudioBtn');
 const toggleVideoBtn = document.getElementById('toggleVideoBtn');
 const startMediaBtn = document.getElementById('startMediaBtn');
+const switchToCameraBtn = document.getElementById('switchToCameraBtn');
 const leaveStreamBtn = document.getElementById('leaveStreamBtn');
 const endStreamBtn = document.getElementById('endStreamBtn');
 const leaveCoHostBtn = document.getElementById('leaveCoHostBtn');
@@ -122,6 +136,102 @@ function formatTime(date) {
     hours = hours % 12;
     hours = hours ? hours : 12;
     return `${hours}:${minutes}${ampm}`;
+}
+
+// ===== MOBILE NAVIGATION =====
+function showMobileView(view) {
+    currentMobileView = view;
+    
+    // Hide all views
+    streamsListSection.style.display = 'none';
+    streamViewSection.style.display = 'none';
+    profileView.style.display = 'none';
+    settingsView.style.display = 'none';
+    mobileViewersView.style.display = 'none';
+    
+    // Remove active class from all nav buttons
+    document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected view and activate button
+    switch(view) {
+        case 'stream':
+            if (currentRoomId) {
+                streamViewSection.style.display = 'flex';
+            } else {
+                streamsListSection.style.display = 'block';
+            }
+            navStreamBtn.classList.add('active');
+            break;
+        case 'profile':
+            profileView.style.display = 'block';
+            navProfileBtn.classList.add('active');
+            updateProfileView();
+            break;
+        case 'viewers':
+            mobileViewersView.style.display = 'block';
+            navViewersBtn.classList.add('active');
+            updateMobileViewersList();
+            break;
+        case 'settings':
+            settingsView.style.display = 'block';
+            navSettingsBtn.classList.add('active');
+            break;
+    }
+}
+
+function updateProfileView() {
+    if (currentUser) {
+        document.getElementById('profileUsername').textContent = currentUser.username;
+        document.getElementById('profileEmail').textContent = currentUser.email || 'Not available';
+        document.getElementById('profileFullName').textContent = `${currentUser.firstName} ${currentUser.lastName}`;
+        const initials = (currentUser.firstName[0] + currentUser.lastName[0]).toUpperCase();
+        document.getElementById('profileAvatar').textContent = initials;
+    }
+}
+
+function updateMobileViewersList() {
+    if (!currentRoomId) {
+        document.getElementById('mobileViewersListContainer').innerHTML = '<p class="no-data">Not in a stream</p>';
+        return;
+    }
+    
+    // Use the same viewers list data
+    const viewersListClone = viewersList.innerHTML;
+    document.getElementById('mobileViewersListContainer').innerHTML = viewersListClone || '<p class="no-data">No viewers yet</p>';
+}
+
+// Mobile navigation event listeners
+if (navStreamBtn) {
+    navStreamBtn.addEventListener('click', async () => {
+        if (currentRoomId) {
+            const confirmed = await showConfirm('Leave current stream and return to streams list?', 'Leave Stream');
+            if (confirmed) {
+                if (isHost) {
+                    await client.endStream(currentRoomId);
+                } else {
+                    await client.leaveStream(currentRoomId);
+                }
+                cleanup();
+                showMobileView('stream');
+            }
+        } else {
+            showMobileView('stream');
+        }
+    });
+}
+
+if (navProfileBtn) {
+    navProfileBtn.addEventListener('click', () => showMobileView('profile'));
+}
+
+if (navViewersBtn) {
+    navViewersBtn.addEventListener('click', () => showMobileView('viewers'));
+}
+
+if (navSettingsBtn) {
+    navSettingsBtn.addEventListener('click', () => showMobileView('settings'));
 }
 
 // ===== CONFIRMATION MODAL =====
@@ -307,7 +417,8 @@ async function login(username, password) {
             id: result.data.id,
             username: result.data.userName,
             firstName: result.data.firstName,
-            lastName: result.data.lastName
+            lastName: result.data.lastName,
+            email: result.data.email || ''
         };
         accessToken = result.data.token;
         
@@ -336,6 +447,12 @@ async function initializeApp() {
     await initStreamingClient();
     showStreamsList();
     startStreamsListPolling();
+    
+    // Show mobile nav if on mobile
+    if (window.innerWidth < 1000 && mobileNav) {
+        mobileNav.style.display = 'flex';
+        showMobileView('stream');
+    }
 }
 
 // ===== STREAMING CLIENT =====
@@ -359,8 +476,8 @@ async function initStreamingClient() {
     client.onCoHostLeft = handleCoHostLeft;
     client.onUserRemoved = handleUserRemoved;
     client.onUserBlocked = handleUserBlocked;
-
     client.onCoHostMediaRemoved = handleCoHostMediaRemoved;
+    client.onError = handleError;
 
     try {
         await client.connect();
@@ -369,6 +486,18 @@ async function initStreamingClient() {
     } catch (error) {
         console.error('Failed to connect:', error);
         showToast('Failed to connect to streaming service', 'error');
+    }
+}
+
+// Handle error events (blocked user on join attempt)
+function handleError(data) {
+    if (data.message && data.message.includes('blocked')) {
+        showToast('You have been blocked from entering this room', 'error', 'Access Denied');
+        setTimeout(() => {
+            showStreamsList();
+        }, 2000);
+    } else {
+        showToast(data.message || 'An error occurred', 'error');
     }
 }
 
@@ -450,12 +579,20 @@ function showStreamsList() {
     streamViewSection.style.display = 'none';
     backBtn.style.visibility = 'hidden';
     displayStreamsList();
+    
+    if (window.innerWidth < 1000) {
+        showMobileView('stream');
+    }
 }
 
 function hideStreamsList() {
     streamsListSection.style.display = 'none';
     streamViewSection.style.display = 'flex';
     backBtn.style.visibility = 'visible';
+    
+    if (window.innerWidth < 1000) {
+        showMobileView('stream');
+    }
 }
 
 function startStreamsListPolling() {
@@ -807,10 +944,6 @@ function handleUserBlocked(data) {
     }
 }
 
-/**
- * Remove a co-host video element
- * @param {string} userId - The user ID of the co-host to remove
- */
 function removeCoHostVideoElement(userId) {
     const box = document.getElementById(`cohost-box-${userId}`);
     if (box) {
@@ -994,6 +1127,66 @@ startMediaBtn.addEventListener('click', async () => {
     }
 });
 
+// Switch to camera button (for audio streams)
+if (switchToCameraBtn) {
+    switchToCameraBtn.addEventListener('click', async () => {
+        try {
+            // Stop existing producers
+            if (audioProducerId) {
+                await client.closeProducer(currentRoomId, audioProducerId);
+            }
+            if (videoProducerId) {
+                await client.closeProducer(currentRoomId, videoProducerId);
+            }
+            
+            // Switch stream type
+            currentStreamType = 'video';
+            videoContainer.classList.remove('audio-only-bg');
+            videoPlayer.classList.remove('audio-only-bg');
+            
+            // Start new video stream
+            const constraints = {
+                audio: true,
+                video: true
+            };
+            
+            const localStream = await client.startProducing(currentRoomId, constraints);
+            
+            if (isHost) {
+                localVideo.srcObject = localStream;
+                localVideo.muted = true;
+                localVideo.volume = 0;
+            } else if (isCoHost) {
+                const username = currentUser.username;
+                const userId = currentUser.id.toString();
+                
+                let box = document.getElementById(`cohost-box-${userId}`);
+                if (!box) {
+                    box = createCoHostVideoElement(userId, `${username} (You)`);
+                    cohostVideosContainer.appendChild(box);
+                }
+                
+                const video = document.getElementById(`cohost-video-${userId}`);
+                if (video) {
+                    video.srcObject = localStream;
+                    video.muted = true;
+                    video.volume = 0;
+                }
+            }
+            
+            const producers = Array.from(client.producers.entries());
+            audioProducerId = producers.find(([id, kind]) => kind === 'audio')?.[0];
+            videoProducerId = producers.find(([id, kind]) => kind === 'video')?.[0];
+            
+            updateUI();
+            showToast('Switched to video mode!', 'success');
+        } catch (err) {
+            console.error('Failed to switch to camera:', err);
+            showToast('Failed to switch to camera', 'error');
+        }
+    });
+}
+
 toggleAudioBtn.addEventListener('click', async () => {
     if (audioProducerId) {
         if (audioEnabled) {
@@ -1152,12 +1345,13 @@ function updateViewersList(participants) {
     
     if (viewersList) viewersList.innerHTML = viewersHTML;
     if (viewersModalList) viewersModalList.innerHTML = viewersHTML;
+    
+    // Update mobile viewers list if on mobile view
+    if (window.innerWidth < 1000 && currentMobileView === 'viewers') {
+        updateMobileViewersList();
+    }
 }
 
-/**
- * Handle co-host media removed event
- * @param {Object} data - Event data containing userId and username
- */
 function handleCoHostMediaRemoved(data) {
     console.log('Co-host media removed:', data);
     removeCoHostVideoElement(data.userId);
@@ -1236,7 +1430,8 @@ function updateUI() {
     
     if (startMediaBtn) startMediaBtn.style.display = (inStream && !hasMedia && canProduce) ? 'flex' : 'none';
     if (toggleAudioBtn) toggleAudioBtn.style.display = hasMedia ? 'flex' : 'none';
-    if (toggleVideoBtn) toggleVideoBtn.style.display = (hasMedia && (currentStreamType === 'video' || isCoHost)) ? 'flex' : 'none';
+    if (toggleVideoBtn) toggleVideoBtn.style.display = (hasMedia && currentStreamType === 'video') ? 'flex' : 'none';
+    if (switchToCameraBtn) switchToCameraBtn.style.display = (hasMedia && currentStreamType === 'audio' && canProduce) ? 'flex' : 'none';
     if (endStreamBtn) endStreamBtn.style.display = (inStream && isHost) ? 'flex' : 'none';
     if (leaveCoHostBtn) leaveCoHostBtn.style.display = (inStream && isCoHost) ? 'flex' : 'none';
     
@@ -1352,12 +1547,6 @@ function ensureLocalAudioMuted() {
     console.log('Local audio monitoring disabled to prevent echo');
 }
 
-/**
- * Create a co-host video element
- * @param {string} userId - The user ID of the co-host
- * @param {string} username - The username of the co-host
- * @returns {HTMLElement} The created video box element
- */
 function createCoHostVideoElement(userId, username) {
     const box = document.createElement('div');
     box.className = 'cohost-video-box';
@@ -1433,6 +1622,19 @@ if (closeViewersModal) {
     });
 }
 
-
+// ===== RESPONSIVE HANDLING =====
+window.addEventListener('resize', () => {
+    if (window.innerWidth < 1000) {
+        if (mobileNav) mobileNav.style.display = 'flex';
+    } else {
+        if (mobileNav) mobileNav.style.display = 'none';
+        // Reset to default view on desktop
+        streamsListSection.style.display = currentRoomId ? 'none' : 'block';
+        streamViewSection.style.display = currentRoomId ? 'flex' : 'none';
+        profileView.style.display = 'none';
+        settingsView.style.display = 'none';
+        mobileViewersView.style.display = 'none';
+    }
+});
 
 console.log('StreamSphere initialized');
