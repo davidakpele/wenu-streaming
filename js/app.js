@@ -539,21 +539,19 @@ function handleStreamStarted(data) {
     ensureLocalAudioMuted();
 }
 
-
 function handleJoinedStream(data) {
     currentRoomId = data.data.stream.roomid;
     client.currentRoomId = currentRoomId;
     streamStartTime = new Date(data.data.status.start_time);
-
     const userRole = data.data.userdetails.role;
     if (userRole === 'host') {
         isHost = true;
         showToast('Welcome back! You are the host of this stream.', 'success', 'Host');
-        _logger.LogInformation("User rejoined as host");
+        console.log("User rejoined as host");
     } else {
         isHost = false;
     }
-    
+  
     if (data.data.media_settings.videoEnabled === false && data.data.media_settings.audioEnabled === true) {
         currentStreamType = 'audio';
         videoContainer.classList.add('audio-only-bg');
