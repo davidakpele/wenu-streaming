@@ -711,8 +711,13 @@ function handleCoHostLeft(data) {
 
 function handleUserRemoved(data) {
     if (data.userId === currentUser.id) {
-        showToast('You have been removed from the stream', 'warning');
-        cleanup();
+        showToast('You have been removed from the stream', 'warning', 'Removed');
+        addSystemMessage('You have been removed from the stream by the host.');
+        
+        // Give user time to see the message before cleanup
+        setTimeout(() => {
+            cleanup();
+        }, 2000);
     } else {
         addSystemMessage(data.message);
     }
@@ -720,9 +725,22 @@ function handleUserRemoved(data) {
 
 function handleUserBlocked(data) {
     if (data.userId === currentUser.id) {
-        showToast('You have been blocked from this stream', 'error');
+        // Show notification and wait before cleanup
+        showToast('You have been blocked from this stream', 'error', 'Blocked');
+        addSystemMessage('You have been blocked by the host and cannot rejoin this stream.');
         blockedUsers.add(currentRoomId);
-        cleanup();
+        
+        // Disable all controls immediately to prevent further interaction
+        chatInput.disabled = true;
+        sendMessageBtn.disabled = true;
+        if (startMediaBtn) startMediaBtn.disabled = true;
+        if (toggleAudioBtn) toggleAudioBtn.disabled = true;
+        if (toggleVideoBtn) toggleVideoBtn.disabled = true;
+        
+        // Give user time to see the message before cleanup
+        setTimeout(() => {
+            cleanup();
+        }, 3000);
     } else {
         addSystemMessage(data.message);
     }
