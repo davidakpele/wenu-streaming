@@ -1,3 +1,5 @@
+<!-- Index.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,10 +119,17 @@
             <div id="streamViewSection" class="main-content" style="display: none;">
                 <!-- Video Section -->
                 <div class="video-section-container">
-                    <div class="video-container">
-                        <div class="video-player">
+                    <div class="video-container" id="videoContainer">
+                        <div class="video-player" id="videoPlayer">
                             <video id="localVideo" autoplay muted playsinline class="video-bg"></video>
                             <div id="remoteVideosContainer" class="remote-videos-container"></div>
+                            
+                            <!-- Co-host video box -->
+                            <div id="cohostVideoBox" class="cohost-video-box" style="display: none;">
+                                <video id="cohostVideo" autoplay playsinline></video>
+                                <div class="cohost-video-label" id="cohostVideoLabel">Co-host</div>
+                            </div>
+                            
                             <div class="video-overlay"></div>
                             <div class="video-info">
                                 <h2 class="stream-title" id="streamTitle">Stream Title</h2>
@@ -184,6 +193,15 @@
                                     </svg>
                                     <span>END STREAM</span>
                                 </button>
+                                
+                                <button class="control-btn" id="leaveCoHostBtn" style="display: none;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                        <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M16 17L21 12L16 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M21 12H9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>LEAVE CO-HOST</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -237,7 +255,7 @@
     <!-- Menu Modal -->
     <div id="menuModal" class="modal" style="display: none;">
         <div class="modal-content menu-modal">
-            <div class="menu-header">
+            <div class="modal-header">
                 <h3>Menu</h3>
                 <button class="close-modal" id="closeMenuModal">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -316,6 +334,66 @@
                 </div>
                 <button type="submit" class="btn-primary btn-full">Start Broadcasting</button>
             </form>
+        </div>
+    </div>
+
+    <!-- User Actions Modal -->
+    <div id="userActionsModal" class="modal user-actions-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="userActionsTitle">User Actions</h3>
+                <button class="close-modal" id="closeUserActionsModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="user-actions-list">
+                <button class="user-action-item" id="inviteCoHostAction">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="8.5" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M20 8V14M17 11H23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Invite to Co-host
+                </button>
+                <button class="user-action-item" id="removeUserAction">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="8.5" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+                        <path d="M17 11H23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Remove from Stream
+                </button>
+                <button class="user-action-item danger" id="blockUserAction">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M4.93 4.93L19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Block User
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Co-host Invite Modal -->
+    <div id="cohostInviteModal" class="modal cohost-invite-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Co-host Invitation</h3>
+                <button class="close-modal" id="closeCohostInviteModal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="cohost-invite-content">
+                <p id="cohostInviteMessage">You've been invited to co-host this stream!</p>
+                <div class="cohost-invite-actions">
+                    <button class="btn-secondary" id="rejectCohostBtn">Reject</button>
+                    <button class="btn-primary" id="acceptCohostBtn">Accept</button>
+                </div>
+            </div>
         </div>
     </div>
 

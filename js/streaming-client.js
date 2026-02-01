@@ -1,3 +1,5 @@
+// js/streaming-client.js
+
 // WebRTC Streaming Client
 class StreamingClient {
     constructor(hubUrl, accessToken) {
@@ -129,6 +131,38 @@ class StreamingClient {
         this.connection.on('StreamEnded', (data) => {
             console.log('Stream ended:', data);
             this.onStreamEnded(data);
+        });
+        
+        // Co-host events
+        this.connection.on('CoHostInvite', (data) => {
+            console.log('Co-host invite received:', data);
+            this.onCoHostInvite(data);
+        });
+        
+        this.connection.on('CoHostAdded', (data) => {
+            console.log('Co-host added:', data);
+            this.onCoHostAdded(data);
+        });
+        
+        this.connection.on('CoHostRemoved', (data) => {
+            console.log('Co-host removed:', data);
+            this.onCoHostRemoved(data);
+        });
+        
+        this.connection.on('CoHostLeft', (data) => {
+            console.log('Co-host left:', data);
+            this.onCoHostLeft(data);
+        });
+        
+        // User management events
+        this.connection.on('UserRemoved', (data) => {
+            console.log('User removed:', data);
+            this.onUserRemoved(data);
+        });
+        
+        this.connection.on('UserBlocked', (data) => {
+            console.log('User blocked:', data);
+            this.onUserBlocked(data);
         });
 
         this.connection.on('Error', (data) => {
@@ -423,6 +457,71 @@ class StreamingClient {
     async sendMessage(roomId, message) {
         await this.connection.invoke('SendStreamMessage', roomId, message);
     }
+    
+    // Co-host management methods
+    async inviteCoHost(roomId, targetUsername, targetUserId) {
+        try {
+            await this.connection.invoke('InviteCoHost', roomId, targetUsername, targetUserId);
+        } catch (err) {
+            console.error('Error inviting co-host:', err);
+            throw err;
+        }
+    }
+    
+    async acceptCoHostInvite(roomId) {
+        try {
+            await this.connection.invoke('AcceptCoHostInvite', roomId);
+        } catch (err) {
+            console.error('Error accepting co-host invite:', err);
+            throw err;
+        }
+    }
+    
+    async rejectCoHostInvite(roomId) {
+        try {
+            await this.connection.invoke('RejectCoHostInvite', roomId);
+        } catch (err) {
+            console.error('Error rejecting co-host invite:', err);
+            throw err;
+        }
+    }
+    
+    async removeCoHost(roomId, targetUsername, targetUserId) {
+        try {
+            await this.connection.invoke('RemoveCoHost', roomId, targetUsername, targetUserId);
+        } catch (err) {
+            console.error('Error removing co-host:', err);
+            throw err;
+        }
+    }
+    
+    async leaveCoHost(roomId) {
+        try {
+            await this.connection.invoke('LeaveCoHost', roomId);
+        } catch (err) {
+            console.error('Error leaving co-host:', err);
+            throw err;
+        }
+    }
+    
+    // User management methods
+    async removeUser(roomId, targetUsername, targetUserId) {
+        try {
+            await this.connection.invoke('RemoveUser', roomId, targetUsername, targetUserId);
+        } catch (err) {
+            console.error('Error removing user:', err);
+            throw err;
+        }
+    }
+    
+    async blockUser(roomId, targetUsername, targetUserId) {
+        try {
+            await this.connection.invoke('BlockUser', roomId, targetUsername, targetUserId);
+        } catch (err) {
+            console.error('Error blocking user:', err);
+            throw err;
+        }
+    }
 
     async leaveStream(roomId) {
         this.peerConnections.forEach(pc => {
@@ -669,6 +768,12 @@ class StreamingClient {
     onRemoteStream(stream, producerId, kind) {
         console.log('Received remote stream:', { producerId, kind });
     }
+    onCoHostInvite(data) {}
+    onCoHostAdded(data) {}
+    onCoHostRemoved(data) {}
+    onCoHostLeft(data) {}
+    onUserRemoved(data) {}
+    onUserBlocked(data) {}
 
     disconnect() {
         if (this.connection) {

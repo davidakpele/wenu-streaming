@@ -1,4 +1,4 @@
-// StreamSphere Application
+// js/app.js
 const API_URL = 'https://wemu.onrender.com';
 const LOGIN_ENDPOINT = '/api/Auth/login';
 const REGISTER_ENDPOINT = '/api/Auth/register';
@@ -10,6 +10,7 @@ let accessToken = null;
 let client = null;
 let currentRoomId = null;
 let isHost = false;
+let isCoHost = false;
 let streamStartTime = null;
 let durationInterval = null;
 let audioProducerId = null;
@@ -18,6 +19,9 @@ let audioEnabled = true;
 let videoEnabled = true;
 let streamsListInterval = null;
 let currentStreamType = 'audio';
+let blockedUsers = new Set(); // Track blocked users
+let selectedUserForActions = null; // Track user selected for actions
+let cohostProducers = new Map(); // Track co-host media producers
 
 // DOM Elements
 const authContainer = document.getElementById('authContainer');
@@ -47,11 +51,18 @@ const closeStartStreamModal = document.getElementById('closeStartStreamModal');
 const startStreamForm = document.getElementById('startStreamForm');
 
 // Stream Elements
+const videoContainer = document.getElementById('videoContainer');
+const videoPlayer = document.getElementById('videoPlayer');
 const localVideo = document.getElementById('localVideo');
 const remoteVideosContainer = document.getElementById('remoteVideosContainer');
 const streamTitle = document.getElementById('streamTitle');
 const streamerAvatar = document.getElementById('streamerAvatar');
 const shareBtn = document.getElementById('shareBtn');
+
+// Co-host Elements
+const cohostVideoBox = document.getElementById('cohostVideoBox');
+const cohostVideo = document.getElementById('cohostVideo');
+const cohostVideoLabel = document.getElementById('cohostVideoLabel');
 
 // Control Buttons
 const toggleAudioBtn = document.getElementById('toggleAudioBtn');
@@ -59,6 +70,7 @@ const toggleVideoBtn = document.getElementById('toggleVideoBtn');
 const startMediaBtn = document.getElementById('startMediaBtn');
 const leaveStreamBtn = document.getElementById('leaveStreamBtn');
 const endStreamBtn = document.getElementById('endStreamBtn');
+const leaveCoHostBtn = document.getElementById('leaveCoHostBtn');
 
 // Chat Elements
 const chatMessages = document.getElementById('chatMessages');
@@ -77,6 +89,21 @@ const closeViewersModal = document.getElementById('closeViewersModal');
 const viewersModalList = document.getElementById('viewersModalList');
 const viewerCountModal = document.getElementById('viewerCountModal');
 
+// User Actions Modal
+const userActionsModal = document.getElementById('userActionsModal');
+const closeUserActionsModal = document.getElementById('closeUserActionsModal');
+const userActionsTitle = document.getElementById('userActionsTitle');
+const inviteCoHostAction = document.getElementById('inviteCoHostAction');
+const removeUserAction = document.getElementById('removeUserAction');
+const blockUserAction = document.getElementById('blockUserAction');
+
+// Co-host Invite Modal
+const cohostInviteModal = document.getElementById('cohostInviteModal');
+const closeCohostInviteModal = document.getElementById('closeCohostInviteModal');
+const cohostInviteMessage = document.getElementById('cohostInviteMessage');
+const acceptCohostBtn = document.getElementById('acceptCohostBtn');
+const rejectCohostBtn = document.getElementById('rejectCohostBtn');
+
 // Confirmation Modal
 const confirmModal = document.getElementById('confirmModal');
 const confirmTitle = document.getElementById('confirmTitle');
@@ -85,6 +112,17 @@ const confirmOk = document.getElementById('confirmOk');
 const confirmCancel = document.getElementById('confirmCancel');
 const closeConfirmModal = document.getElementById('closeConfirmModal');
 let confirmResolve = null;
+
+// ===== UTILITY FUNCTIONS =====
+function formatTime(date) {
+    const d = new Date(date);
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutes}${ampm}`;
+}
 
 // ===== CONFIRMATION MODAL =====
 function showConfirm(message, title = 'Confirm Action') {
@@ -209,7 +247,6 @@ async function register(email, username, firstName, lastName, password) {
     const originalText = submitBtn.textContent;
     
     try {
-        // Show loading state
         submitBtn.disabled = true;
         submitBtn.classList.add('btn-loading');
         submitBtn.textContent = 'Creating account...';
@@ -239,7 +276,6 @@ async function register(email, username, firstName, lastName, password) {
         console.error('Registration error:', error);
         showToast(error.message || 'Failed to create account', 'error');
     } finally {
-        // Remove loading state
         submitBtn.disabled = false;
         submitBtn.classList.remove('btn-loading');
         submitBtn.textContent = originalText;
@@ -251,7 +287,6 @@ async function login(username, password) {
     const originalText = submitBtn.textContent;
     
     try {
-        // Show loading state
         submitBtn.disabled = true;
         submitBtn.classList.add('btn-loading');
         submitBtn.textContent = 'Signing in...';
@@ -285,7 +320,6 @@ async function login(username, password) {
         console.error('Login error:', error);
         showToast(error.message || 'Failed to login', 'error');
     } finally {
-        // Remove loading state
         submitBtn.disabled = false;
         submitBtn.classList.remove('btn-loading');
         submitBtn.textContent = originalText;
@@ -319,6 +353,12 @@ async function initStreamingClient() {
     client.onProducerResumed = handleProducerResumed;
     client.onProducerClosed = handleProducerClosed;
     client.onNewProducer = handleNewProducer;
+    client.onCoHostInvite = handleCoHostInvite;
+    client.onCoHostAdded = handleCoHostAdded;
+    client.onCoHostRemoved = handleCoHostRemoved;
+    client.onCoHostLeft = handleCoHostLeft;
+    client.onUserRemoved = handleUserRemoved;
+    client.onUserBlocked = handleUserBlocked;
 
     try {
         await client.connect();
@@ -452,6 +492,12 @@ startStreamForm.addEventListener('submit', async (e) => {
     currentStreamType = type;
     startStreamModal.style.display = 'none';
     
+    // Set audio-only background if needed
+    if (type === 'audio') {
+        videoContainer.classList.add('audio-only-bg');
+        videoPlayer.classList.add('audio-only-bg');
+    }
+    
     try {
         await client.startStream(
             currentUser.username,
@@ -495,6 +541,17 @@ function handleJoinedStream(data) {
     currentRoomId = data.data.stream.roomid;
     client.currentRoomId = currentRoomId;
     streamStartTime = new Date(data.data.status.start_time);
+    
+    // Check stream type and set background
+    if (data.data.media_settings.videoEnabled === false && data.data.media_settings.audioEnabled === true) {
+        currentStreamType = 'audio';
+        videoContainer.classList.add('audio-only-bg');
+        videoPlayer.classList.add('audio-only-bg');
+    } else if (data.data.media_settings.videoEnabled === true) {
+        currentStreamType = 'video';
+        videoContainer.classList.remove('audio-only-bg');
+        videoPlayer.classList.remove('audio-only-bg');
+    }
     
     hideStreamsList();
     updateUI();
@@ -544,31 +601,50 @@ function handleStreamEnded(data) {
 function handleRemoteStream(stream, producerUserId, kind) {
     console.log('handleRemoteStream called:', { producerUserId, kind, stream });
     
-    let videoElement = document.getElementById(`remote-${producerUserId}`);
+    // Check if this is a co-host stream
+    const isCoHostStream = cohostProducers.has(producerUserId);
     
-    if (!videoElement) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'remote-video-wrapper';
-        wrapper.id = `wrapper-${producerUserId}`;
+    if (isCoHostStream) {
+        // Display co-host video in the special box
+        if (kind === 'video') {
+            cohostVideoBox.style.display = 'block';
+            cohostVideo.srcObject = stream;
+            cohostVideo.play().catch(err => console.error('Error playing co-host video:', err));
+        } else if (kind === 'audio') {
+            // Audio will play automatically
+            const audioElement = document.createElement('audio');
+            audioElement.srcObject = stream;
+            audioElement.autoplay = true;
+            audioElement.id = `cohost-audio-${producerUserId}`;
+            document.body.appendChild(audioElement);
+        }
+    } else {
+        let videoElement = document.getElementById(`remote-${producerUserId}`);
         
-        videoElement = document.createElement('video');
-        videoElement.id = `remote-${producerUserId}`;
-        videoElement.autoplay = true;
-        videoElement.playsinline = true;
-        videoElement.setAttribute('playsinline', '');
+        if (!videoElement) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'remote-video-wrapper';
+            wrapper.id = `wrapper-${producerUserId}`;
+            
+            videoElement = document.createElement('video');
+            videoElement.id = `remote-${producerUserId}`;
+            videoElement.autoplay = true;
+            videoElement.playsinline = true;
+            videoElement.setAttribute('playsinline', '');
+            
+            const label = document.createElement('div');
+            label.className = 'remote-video-label';
+            label.textContent = 'Remote';
+            
+            wrapper.appendChild(videoElement);
+            wrapper.appendChild(label);
+            remoteVideosContainer.appendChild(wrapper);
+        }
         
-        const label = document.createElement('div');
-        label.className = 'remote-video-label';
-        label.textContent = 'Remote';
-        
-        wrapper.appendChild(videoElement);
-        wrapper.appendChild(label);
-        remoteVideosContainer.appendChild(wrapper);
-    }
-    
-    if (!videoElement.srcObject) {
-        videoElement.srcObject = stream;
-        videoElement.play().catch(err => console.error('Error playing video:', err));
+        if (!videoElement.srcObject) {
+            videoElement.srcObject = stream;
+            videoElement.play().catch(err => console.error('Error playing video:', err));
+        }
     }
 }
 
@@ -583,6 +659,16 @@ function handleProducerResumed(data) {
 function handleProducerClosed(data) {
     const wrapper = document.getElementById(`wrapper-${data.producerId}`);
     if (wrapper) wrapper.remove();
+    
+    // Remove co-host video if applicable
+    if (cohostProducers.has(data.producerId)) {
+        cohostVideoBox.style.display = 'none';
+        cohostVideo.srcObject = null;
+        cohostProducers.delete(data.producerId);
+        
+        const audioElement = document.getElementById(`cohost-audio-${data.producerId}`);
+        if (audioElement) audioElement.remove();
+    }
 }
 
 function handleNewProducer(data) {
@@ -592,16 +678,193 @@ function handleNewProducer(data) {
     }
 }
 
+// ===== CO-HOST HANDLERS =====
+function handleCoHostInvite(data) {
+    cohostInviteMessage.textContent = `${data.hostUsername} invited you to be a co-host!`;
+    cohostInviteModal.style.display = 'flex';
+}
+
+function handleCoHostAdded(data) {
+    if (data.userId === currentUser.id) {
+        isCoHost = true;
+        updateUI();
+        showToast('You are now a co-host!', 'success');
+    }
+    addSystemMessage(data.message);
+    updateViewersList(data.participants || []);
+}
+
+function handleCoHostRemoved(data) {
+    if (data.userId === currentUser.id) {
+        isCoHost = false;
+        updateUI();
+        showToast('You have been removed from co-host', 'warning');
+    }
+    addSystemMessage(data.message);
+    updateViewersList(data.participants || []);
+}
+
+function handleCoHostLeft(data) {
+    addSystemMessage(data.message);
+    updateViewersList(data.participants || []);
+}
+
+function handleUserRemoved(data) {
+    if (data.userId === currentUser.id) {
+        showToast('You have been removed from the stream', 'warning');
+        cleanup();
+    } else {
+        addSystemMessage(data.message);
+    }
+}
+
+function handleUserBlocked(data) {
+    if (data.userId === currentUser.id) {
+        showToast('You have been blocked from this stream', 'error');
+        blockedUsers.add(currentRoomId);
+        cleanup();
+    } else {
+        addSystemMessage(data.message);
+    }
+}
+
+// Co-host invite modal handlers
+acceptCohostBtn.addEventListener('click', async () => {
+    try {
+        await client.acceptCoHostInvite(currentRoomId);
+        cohostInviteModal.style.display = 'none';
+    } catch (error) {
+        showToast('Failed to accept co-host invite', 'error');
+    }
+});
+
+rejectCohostBtn.addEventListener('click', async () => {
+    try {
+        await client.rejectCoHostInvite(currentRoomId);
+        cohostInviteModal.style.display = 'none';
+        showToast('Co-host invite rejected', 'info');
+    } catch (error) {
+        showToast('Failed to reject co-host invite', 'error');
+    }
+});
+
+closeCohostInviteModal.addEventListener('click', () => {
+    cohostInviteModal.style.display = 'none';
+});
+
+// Leave co-host button
+leaveCoHostBtn.addEventListener('click', async () => {
+    const confirmed = await showConfirm('Are you sure you want to leave co-host role?', 'Leave Co-host');
+    if (confirmed) {
+        try {
+            await client.leaveCoHost(currentRoomId);
+            isCoHost = false;
+            updateUI();
+        } catch (error) {
+            showToast('Failed to leave co-host', 'error');
+        }
+    }
+});
+
+// ===== USER ACTIONS =====
+function showUserActionsModal(user) {
+    if (!isHost) return; // Only host can perform actions
+    
+    selectedUserForActions = user;
+    userActionsTitle.textContent = `Actions for ${user.username}`;
+    
+    // Show/hide invite to co-host based on current role
+    if (user.role === 'co-host') {
+        inviteCoHostAction.style.display = 'none';
+    } else {
+        inviteCoHostAction.style.display = 'flex';
+    }
+    
+    userActionsModal.style.display = 'flex';
+}
+
+closeUserActionsModal.addEventListener('click', () => {
+    userActionsModal.style.display = 'none';
+    selectedUserForActions = null;
+});
+
+inviteCoHostAction.addEventListener('click', async () => {
+    if (!selectedUserForActions) return;
+    
+    userActionsModal.style.display = 'none';
+    
+    try {
+        await client.inviteCoHost(currentRoomId, selectedUserForActions.username, parseInt(selectedUserForActions.id));
+        showToast(`Invited ${selectedUserForActions.username} to co-host`, 'success');
+    } catch (error) {
+        showToast('Failed to invite co-host', 'error');
+    }
+    
+    selectedUserForActions = null;
+});
+
+removeUserAction.addEventListener('click', async () => {
+    if (!selectedUserForActions) return;
+    
+    userActionsModal.style.display = 'none';
+    
+    const confirmed = await showConfirm(
+        `Are you sure you want to remove ${selectedUserForActions.username} from the stream?`,
+        'Remove User'
+    );
+    
+    if (confirmed) {
+        try {
+            await client.removeUser(currentRoomId, selectedUserForActions.username, parseInt(selectedUserForActions.id));
+            showToast(`Removed ${selectedUserForActions.username} from stream`, 'success');
+        } catch (error) {
+            showToast('Failed to remove user', 'error');
+        }
+    }
+    
+    selectedUserForActions = null;
+});
+
+blockUserAction.addEventListener('click', async () => {
+    if (!selectedUserForActions) return;
+    
+    userActionsModal.style.display = 'none';
+    
+    const confirmed = await showConfirm(
+        `Are you sure you want to block ${selectedUserForActions.username}? They will not be able to join this stream again.`,
+        'Block User'
+    );
+    
+    if (confirmed) {
+        try {
+            await client.blockUser(currentRoomId, selectedUserForActions.username, parseInt(selectedUserForActions.id));
+            showToast(`Blocked ${selectedUserForActions.username}`, 'success');
+        } catch (error) {
+            showToast('Failed to block user', 'error');
+        }
+    }
+    
+    selectedUserForActions = null;
+});
+
 // ===== MEDIA CONTROLS =====
 startMediaBtn.addEventListener('click', async () => {
     try {
         const constraints = {
             audio: true,
-            video: currentStreamType === 'video'
+            video: currentStreamType === 'video' || isCoHost
         };
         
         const localStream = await client.startProducing(currentRoomId, constraints);
-        localVideo.srcObject = localStream;
+        
+        if (isHost) {
+            localVideo.srcObject = localStream;
+        } else if (isCoHost) {
+            // Co-host video goes to special box
+            cohostVideoBox.style.display = 'block';
+            cohostVideo.srcObject = localStream;
+            cohostVideoLabel.textContent = currentUser.username;
+        }
         
         const producers = Array.from(client.producers.entries());
         audioProducerId = producers.find(([id, kind]) => kind === 'audio')?.[0];
@@ -712,7 +975,7 @@ async function sendMessage() {
 function addMessage(sender, content, timestamp) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'chat-message';
-    const time = new Date(timestamp).toLocaleTimeString();
+    const time = formatTime(timestamp);
     const initials = sender.substring(0, 2).toUpperCase();
     
     messageDiv.innerHTML = `
@@ -746,13 +1009,27 @@ function updateViewersList(participants) {
     
     const viewersHTML = participants.map(p => {
         const initials = p.username.substring(0, 2).toUpperCase();
+        const roleClass = p.role === 'co-host' ? 'co-host' : '';
+        const showActions = isHost && p.id !== currentUser.id.toString();
+        
         return `
             <div class="viewer-item">
                 <div class="viewer-avatar">${initials}</div>
                 <div class="viewer-info">
                     <div class="viewer-name">${escapeHtml(p.username)}</div>
-                    <div class="viewer-role">${p.role}</div>
+                    <div class="viewer-role ${roleClass}">${p.role}</div>
                 </div>
+                ${showActions ? `
+                    <div class="viewer-item-actions">
+                        <button class="viewer-action-btn" data-user='${JSON.stringify(p)}' onclick="handleViewerAction(this)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                                <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         `;
     }).join('');
@@ -760,6 +1037,12 @@ function updateViewersList(participants) {
     if (viewersList) viewersList.innerHTML = viewersHTML;
     if (viewersModalList) viewersModalList.innerHTML = viewersHTML;
 }
+
+// Global function for viewer actions
+window.handleViewerAction = function(button) {
+    const userData = JSON.parse(button.dataset.user);
+    showUserActionsModal(userData);
+};
 
 // ===== MENU =====
 menuBtn.addEventListener('click', () => {
@@ -823,11 +1106,13 @@ backBtn.addEventListener('click', async () => {
 function updateUI() {
     const inStream = currentRoomId !== null;
     const hasMedia = client && client.producers.size > 0;
+    const canProduce = isHost || isCoHost;
     
-    if (startMediaBtn) startMediaBtn.style.display = (inStream && !hasMedia && isHost) ? 'flex' : 'none';
+    if (startMediaBtn) startMediaBtn.style.display = (inStream && !hasMedia && canProduce) ? 'flex' : 'none';
     if (toggleAudioBtn) toggleAudioBtn.style.display = hasMedia ? 'flex' : 'none';
-    if (toggleVideoBtn) toggleVideoBtn.style.display = (hasMedia && currentStreamType === 'video') ? 'flex' : 'none';
+    if (toggleVideoBtn) toggleVideoBtn.style.display = (hasMedia && (currentStreamType === 'video' || isCoHost)) ? 'flex' : 'none';
     if (endStreamBtn) endStreamBtn.style.display = (inStream && isHost) ? 'flex' : 'none';
+    if (leaveCoHostBtn) leaveCoHostBtn.style.display = (inStream && isCoHost) ? 'flex' : 'none';
     
     chatInput.disabled = !inStream;
     sendMessageBtn.disabled = !inStream;
@@ -847,7 +1132,6 @@ function startDurationTimer() {
 }
 
 function cleanup() {
-    // Stop all media tracks (camera and microphone)
     if (client && client.localStream) {
         client.localStream.getTracks().forEach(track => {
             track.stop();
@@ -857,11 +1141,13 @@ function cleanup() {
     
     currentRoomId = null;
     isHost = false;
+    isCoHost = false;
     streamStartTime = null;
     audioProducerId = null;
     videoProducerId = null;
     audioEnabled = true;
     videoEnabled = true;
+    cohostProducers.clear();
     
     if (durationInterval) {
         clearInterval(durationInterval);
@@ -869,12 +1155,18 @@ function cleanup() {
     }
     
     localVideo.srcObject = null;
+    cohostVideo.srcObject = null;
+    cohostVideoBox.style.display = 'none';
     remoteVideosContainer.innerHTML = '';
     chatMessages.innerHTML = '<div class="chat-welcome"><p>Welcome to the chat! Be respectful and enjoy the stream.</p></div>';
     if (viewersList) viewersList.innerHTML = '';
     viewerCount.textContent = '0';
     if (viewerCountBadge) viewerCountBadge.textContent = '0';
     streamDuration.textContent = '00:00';
+    
+    // Remove audio-only background
+    videoContainer.classList.remove('audio-only-bg');
+    videoPlayer.classList.remove('audio-only-bg');
     
     updateUI();
     showStreamsList();
@@ -903,6 +1195,11 @@ window.addEventListener('click', (e) => {
     if (e.target === menuModal) menuModal.style.display = 'none';
     if (e.target === startStreamModal) startStreamModal.style.display = 'none';
     if (e.target === viewersModal) viewersModal.style.display = 'none';
+    if (e.target === userActionsModal) {
+        userActionsModal.style.display = 'none';
+        selectedUserForActions = null;
+    }
+    if (e.target === cohostInviteModal) cohostInviteModal.style.display = 'none';
     if (e.target === confirmModal) {
         if (confirmResolve) {
             confirmResolve(false);
