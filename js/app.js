@@ -157,10 +157,15 @@ function showMobileView(view) {
     // Show selected view and activate button
     switch(view) {
         case 'stream':
+            // Check if user is in an active stream
             if (currentRoomId) {
+                // User is in a stream - show the stream view
                 streamViewSection.style.display = 'flex';
+                backBtn.style.visibility = 'visible';
             } else {
+                // User is not in a stream - show streams list
                 streamsListSection.style.display = 'block';
+                backBtn.style.visibility = 'hidden';
             }
             navStreamBtn.classList.add('active');
             break;
@@ -204,19 +209,12 @@ function updateMobileViewersList() {
 
 // Mobile navigation event listeners
 if (navStreamBtn) {
-    navStreamBtn.addEventListener('click', async () => {
+    navStreamBtn.addEventListener('click', () => {
         if (currentRoomId) {
-            const confirmed = await showConfirm('Leave current stream and return to streams list?', 'Leave Stream');
-            if (confirmed) {
-                if (isHost) {
-                    await client.endStream(currentRoomId);
-                } else {
-                    await client.leaveStream(currentRoomId);
-                }
-                cleanup();
-                showMobileView('stream');
-            }
+            // User is in a stream - just switch to stream view
+            showMobileView('stream');
         } else {
+            // User is not in any stream - show streams list
             showMobileView('stream');
         }
     });
