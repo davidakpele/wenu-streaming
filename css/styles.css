@@ -1096,7 +1096,7 @@ body {
 }
 
 .viewers-list::-webkit-scrollbar {
-    width: 6px;
+    width: 3px;
 }
 
 .viewers-list::-webkit-scrollbar-track {
@@ -1251,7 +1251,7 @@ body {
 }
 
 .chat-messages::-webkit-scrollbar {
-    width: 6px;
+    width: 3px;
 }
 
 .chat-messages::-webkit-scrollbar-track {
@@ -2139,7 +2139,7 @@ body {
 
 /* Scrollbar Styling (Global) */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 3px;
     height: 8px;
 }
 
