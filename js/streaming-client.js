@@ -1,4 +1,4 @@
-// js/streaming-client.js
+// js/streaming-client.js - ECHO FIX VERSION
 
 // WebRTC Streaming Client
 class StreamingClient {

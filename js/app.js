@@ -535,7 +535,10 @@ function handleStreamStarted(data) {
     
     showToast('Stream started successfully!', 'success', 'Live');
     addSystemMessage(`Stream started: ${data.data.stream.title}`);
+
+    ensureLocalAudioMuted();
 }
+
 
 function handleJoinedStream(data) {
     currentRoomId = data.data.stream.roomid;
@@ -633,18 +636,27 @@ function handleRemoteStream(stream, producerUserId, kind) {
     const isCoHostStream = cohostProducers.has(producerUserId);
     
     if (isCoHostStream) {
-        // Display co-host video in the special box
         if (kind === 'video') {
             cohostVideoBox.style.display = 'block';
             cohostVideo.srcObject = stream;
+            cohostVideo.muted = false;
             cohostVideo.play().catch(err => console.error('Error playing co-host video:', err));
         } else if (kind === 'audio') {
-            // Audio will play automatically
-            const audioElement = document.createElement('audio');
-            audioElement.srcObject = stream;
-            audioElement.autoplay = true;
-            audioElement.id = `cohost-audio-${producerUserId}`;
-            document.body.appendChild(audioElement);
+            let audioElement = document.getElementById(`cohost-audio-${producerUserId}`);
+            
+            if (!audioElement) {
+                audioElement = document.createElement('audio');
+                audioElement.srcObject = stream;
+                audioElement.autoplay = true;
+                audioElement.muted = false; 
+                audioElement.id = `cohost-audio-${producerUserId}`;
+                audioElement.style.display = 'none'; 
+                document.body.appendChild(audioElement);
+            } else {
+                audioElement.srcObject = stream;
+            }
+            
+            console.log('Co-host audio element created/updated:', audioElement);
         }
     } else {
         let videoElement = document.getElementById(`remote-${producerUserId}`);
@@ -658,6 +670,7 @@ function handleRemoteStream(stream, producerUserId, kind) {
             videoElement.id = `remote-${producerUserId}`;
             videoElement.autoplay = true;
             videoElement.playsinline = true;
+            videoElement.muted = false; 
             videoElement.setAttribute('playsinline', '');
             
             const label = document.createElement('div');
@@ -671,6 +684,7 @@ function handleRemoteStream(stream, producerUserId, kind) {
         
         if (!videoElement.srcObject) {
             videoElement.srcObject = stream;
+            videoElement.muted = false; 
             videoElement.play().catch(err => console.error('Error playing video:', err));
         }
     }
@@ -717,6 +731,7 @@ function handleCoHostAdded(data) {
         isCoHost = true;
         updateUI();
         showToast('You are now a co-host!', 'success');
+        ensureLocalAudioMuted();
     }
     addSystemMessage(data.message);
     updateViewersList(data.participants || []);
@@ -905,10 +920,14 @@ startMediaBtn.addEventListener('click', async () => {
         
         if (isHost) {
             localVideo.srcObject = localStream;
+            localVideo.muted = true; // *** CRITICAL: Always mute your OWN local video to prevent echo ***
+            localVideo.volume = 0; // Extra safety
         } else if (isCoHost) {
             // Co-host video goes to special box
             cohostVideoBox.style.display = 'block';
             cohostVideo.srcObject = localStream;
+            cohostVideo.muted = true; // *** CRITICAL: Always mute your OWN video to prevent echo ***
+            cohostVideo.volume = 0; // Extra safety
             cohostVideoLabel.textContent = currentUser.username;
         }
         
@@ -1236,6 +1255,20 @@ function copyToClipboard(text) {
     document.body.removeChild(textarea);
 }
 
+function ensureLocalAudioMuted() {
+    // Mute all local video/audio elements to prevent feedback
+    if (localVideo && localVideo.srcObject) {
+        localVideo.muted = true;
+        localVideo.volume = 0;
+    }
+    
+    if (cohostVideo && cohostVideo.srcObject && isCoHost) {
+        cohostVideo.muted = true;
+        cohostVideo.volume = 0;
+    }
+    
+    console.log('Local audio monitoring disabled to prevent echo');
+}
 // ===== MODAL CLOSE ON OUTSIDE CLICK =====
 window.addEventListener('click', (e) => {
     if (e.target === menuModal) menuModal.style.display = 'none';
@@ -1288,5 +1321,7 @@ if (closeViewersModal) {
         viewersModal.style.display = 'none';
     });
 }
+
+
 
 console.log('StreamSphere initialized');
