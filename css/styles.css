@@ -837,7 +837,7 @@ body {
 .viewers-section {
     background: var(--surface-light);
     padding: 20px;
-    max-height: 485px !important;
+    max-height: 400px !important;
 }
 
 .viewers-header {
@@ -1028,7 +1028,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    max-height: 485px !important;
+    max-height: 400px !important;
 }
 
 .chat-messages::-webkit-scrollbar {
