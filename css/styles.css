@@ -474,7 +474,7 @@ body {
 }
 
 /* Desktop Layout */
-@media (min-width: 769px) {
+@media (min-width: 1000px) {
     .main-content {
         flex-direction: row;
     }
