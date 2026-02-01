@@ -541,8 +541,16 @@ function handleJoinedStream(data) {
     currentRoomId = data.data.stream.roomid;
     client.currentRoomId = currentRoomId;
     streamStartTime = new Date(data.data.status.start_time);
+
+    const userRole = data.data.userdetails.role;
+    if (userRole === 'host') {
+        isHost = true;
+        showToast('Welcome back! You are the host of this stream.', 'success', 'Host');
+        _logger.LogInformation("User rejoined as host");
+    } else {
+        isHost = false;
+    }
     
-    // Check stream type and set background
     if (data.data.media_settings.videoEnabled === false && data.data.media_settings.audioEnabled === true) {
         currentStreamType = 'audio';
         videoContainer.classList.add('audio-only-bg');
@@ -563,8 +571,11 @@ function handleJoinedStream(data) {
     
     updateViewersList(data.data.participants.users_list);
     
-    showToast('Joined stream successfully!', 'success');
-    addSystemMessage('Welcome to the stream!');
+    const welcomeMessage = isHost 
+        ? 'Welcome back to your stream!' 
+        : 'Joined stream successfully!';
+    showToast(welcomeMessage, 'success');
+    addSystemMessage(isHost ? 'Welcome back, host!' : 'Welcome to the stream!');
 }
 
 function handleUserJoined(data) {
@@ -573,7 +584,14 @@ function handleUserJoined(data) {
     if (viewerCountModal) viewerCountModal.textContent = data.current_viewers;
     
     updateViewersList(data.participants);
-    showToast(`${data.message}`, 'info');
+
+    if (data.isHostRejoining) {
+        showToast(`${data.message}`, 'success', 'Host Returned');
+        addSystemMessage(`🎉 ${data.message}`);
+    } else {
+        showToast(`${data.message}`, 'info');
+        addSystemMessage(data.message);
+    }
 }
 
 function handleUserLeft(data) {
@@ -582,7 +600,17 @@ function handleUserLeft(data) {
     if (viewerCountModal) viewerCountModal.textContent = data.current_viewers;
     
     updateViewersList(data.participants);
-    showToast(`${data.message}`, 'info');
+    
+    if (data.wasHost && !data.hostRejoined) {
+        showToast('Host left the stream', 'warning', 'Host Left');
+        addSystemMessage('⚠️ ' + data.message);
+        if (!isHost) {
+            showToast('Host has 30 minutes to return or stream will end');
+        }
+    } else {
+        showToast(`${data.message}`, 'info');
+        addSystemMessage(data.message);
+    }
 }
 
 function handleMessageReceived(data) {
