@@ -1265,13 +1265,16 @@ function cleanup() {
         });
     }
 
+    // Clear all co-host video boxes
     if (cohostVideosContainer) {
         cohostVideosContainer.innerHTML = '';
         console.log('Cleared all co-host video boxes');
     }
 
+    // Clear co-host tracking
     cohostProducers.clear();
     
+    // Remove any orphaned co-host audio elements
     document.querySelectorAll('[id^="cohost-audio-"]').forEach(el => {
         console.log('Removing orphaned co-host audio element:', el.id);
         el.remove();
@@ -1285,18 +1288,22 @@ function cleanup() {
     videoProducerId = null;
     audioEnabled = true;
     videoEnabled = true;
-    cohostProducers.clear();
     
     if (durationInterval) {
         clearInterval(durationInterval);
         durationInterval = null;
     }
     
+    // Clear local video
     localVideo.srcObject = null;
-    cohostVideo.srcObject = null;
-    cohostVideoBox.style.display = 'none';
+    
+    // Clear remote videos
     remoteVideosContainer.innerHTML = '';
+    
+    // Clear chat
     chatMessages.innerHTML = '<div class="chat-welcome"><p>Welcome to the chat! Be respectful and enjoy the stream.</p></div>';
+    
+    // Clear viewers
     if (viewersList) viewersList.innerHTML = '';
     viewerCount.textContent = '0';
     if (viewerCountBadge) viewerCountBadge.textContent = '0';
