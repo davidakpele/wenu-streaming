@@ -1,4 +1,4 @@
-// js/streaming-client.js - ECHO FIX VERSION
+// js/streaming-client.js 
 
 // WebRTC Streaming Client
 class StreamingClient {
@@ -154,7 +154,11 @@ class StreamingClient {
             this.onCoHostLeft(data);
         });
         
-        // User management events
+        this.connection.on('CoHostMediaRemoved', (data) => {
+            console.log('Co-host media removed:', data);
+            this.onCoHostMediaRemoved(data);
+        });
+        
         this.connection.on('UserRemoved', (data) => {
             console.log('User removed:', data);
             this.onUserRemoved(data);
@@ -197,6 +201,15 @@ class StreamingClient {
         this.connection.onclose(() => {
             console.log('Connection closed');
         });
+
+        this.connection.on('CoHostMediaRemoved', (data) => {
+            console.log('Co-host media removed:', data);
+            this.onCoHostMediaRemoved(data);
+        });
+    }
+
+    onCoHostMediaRemoved(data) {
+        console.log('Co-host media removed (default handler):', data);
     }
 
     async startStream(username, userId, title, description, category, visibility, type) {
@@ -755,25 +768,26 @@ class StreamingClient {
     }
 
     onStreamStarted(data) {}
-    onJoinedStream(data) {}
-    onUserJoined(data) {}
-    onUserLeft(data) {}
-    onMessageReceived(data) {}
-    onStreamEnded(data) {}
-    onError(data) {}
-    onProducerPaused(data) {}
-    onProducerResumed(data) {}
-    onProducerClosed(data) {}
-    onNewProducer(data) {}
-    onRemoteStream(stream, producerId, kind) {
-        console.log('Received remote stream:', { producerId, kind });
-    }
-    onCoHostInvite(data) {}
-    onCoHostAdded(data) {}
-    onCoHostRemoved(data) {}
-    onCoHostLeft(data) {}
-    onUserRemoved(data) {}
-    onUserBlocked(data) {}
+onJoinedStream(data) {}
+onUserJoined(data) {}
+onUserLeft(data) {}
+onMessageReceived(data) {}
+onStreamEnded(data) {}
+onError(data) {}
+onProducerPaused(data) {}
+onProducerResumed(data) {}
+onProducerClosed(data) {}
+onNewProducer(data) {}
+onRemoteStream(stream, producerId, kind) {
+    console.log('Received remote stream:', { producerId, kind });
+}
+onCoHostInvite(data) {}
+onCoHostAdded(data) {}
+onCoHostRemoved(data) {}
+onCoHostLeft(data) {}
+onCoHostMediaRemoved(data) {} 
+onUserRemoved(data) {}
+onUserBlocked(data) {}
 
     disconnect() {
         if (this.connection) {

@@ -360,6 +360,8 @@ async function initStreamingClient() {
     client.onUserRemoved = handleUserRemoved;
     client.onUserBlocked = handleUserBlocked;
 
+    client.onCoHostMediaRemoved = handleCoHostMediaRemoved;
+
     try {
         await client.connect();
         console.log('Connected to streaming hub');
@@ -634,11 +636,25 @@ function handleRemoteStream(stream, producerUserId, kind) {
     const isCoHostStream = cohostProducers.has(producerUserId);
     
     if (isCoHostStream) {
+        const cohostInfo = cohostProducers.get(producerUserId);
+        const username = cohostInfo?.username || 'Co-host';
+        
         if (kind === 'video') {
-            cohostVideoBox.style.display = 'block';
-            cohostVideo.srcObject = stream;
-            cohostVideo.muted = false;
-            cohostVideo.play().catch(err => console.error('Error playing co-host video:', err));
+            let box = document.getElementById(`cohost-box-${producerUserId}`);
+            
+            if (!box) {
+                box = createCoHostVideoElement(producerUserId, username);
+                cohostVideosContainer.appendChild(box);
+                console.log(`Created new co-host video box for ${username}`);
+            }
+            
+            const video = document.getElementById(`cohost-video-${producerUserId}`);
+            if (video) {
+                video.srcObject = stream;
+                video.muted = false;
+                video.play().catch(err => console.error('Error playing co-host video:', err));
+                console.log(`Co-host video stream set for ${username}`);
+            }
         } else if (kind === 'audio') {
             let audioElement = document.getElementById(`cohost-audio-${producerUserId}`);
             
@@ -646,17 +662,18 @@ function handleRemoteStream(stream, producerUserId, kind) {
                 audioElement = document.createElement('audio');
                 audioElement.srcObject = stream;
                 audioElement.autoplay = true;
-                audioElement.muted = false; 
+                audioElement.muted = false;
                 audioElement.id = `cohost-audio-${producerUserId}`;
-                audioElement.style.display = 'none'; 
+                audioElement.style.display = 'none';
                 document.body.appendChild(audioElement);
+                console.log(`Created new co-host audio element for ${username}`);
             } else {
                 audioElement.srcObject = stream;
+                console.log(`Updated co-host audio stream for ${username}`);
             }
-            
-            console.log('Co-host audio element created/updated:', audioElement);
         }
     } else {
+        // Handle regular remote streams (non-co-host viewers)
         let videoElement = document.getElementById(`remote-${producerUserId}`);
         
         if (!videoElement) {
@@ -668,7 +685,7 @@ function handleRemoteStream(stream, producerUserId, kind) {
             videoElement.id = `remote-${producerUserId}`;
             videoElement.autoplay = true;
             videoElement.playsinline = true;
-            videoElement.muted = false; 
+            videoElement.muted = false;
             videoElement.setAttribute('playsinline', '');
             
             const label = document.createElement('div');
@@ -682,7 +699,7 @@ function handleRemoteStream(stream, producerUserId, kind) {
         
         if (!videoElement.srcObject) {
             videoElement.srcObject = stream;
-            videoElement.muted = false; 
+            videoElement.muted = false;
             videoElement.play().catch(err => console.error('Error playing video:', err));
         }
     }
@@ -700,7 +717,6 @@ function handleProducerClosed(data) {
     const wrapper = document.getElementById(`wrapper-${data.producerId}`);
     if (wrapper) wrapper.remove();
     
-    // Remove co-host video if applicable
     if (cohostProducers.has(data.producerId)) {
         cohostVideoBox.style.display = 'none';
         cohostVideo.srcObject = null;
@@ -713,6 +729,15 @@ function handleProducerClosed(data) {
 
 function handleNewProducer(data) {
     console.log('New producer detected:', data);
+    if (data.isCoHost) {
+        cohostProducers.set(data.userId, {
+            username: data.username,
+            producerId: data.producerId,
+            kind: data.kind
+        });
+        console.log(`Tracked new co-host producer: ${data.username} (${data.kind})`);
+    }
+    
     if (client && client.currentRoomId) {
         client.consumeMedia(client.currentRoomId, data.producerId);
     }
@@ -754,8 +779,7 @@ function handleUserRemoved(data) {
     if (data.userId === currentUser.id) {
         showToast('You have been removed from the stream', 'warning', 'Removed');
         addSystemMessage('You have been removed from the stream by the host.');
-        
-        // Give user time to see the message before cleanup
+
         setTimeout(() => {
             cleanup();
         }, 2000);
@@ -766,25 +790,43 @@ function handleUserRemoved(data) {
 
 function handleUserBlocked(data) {
     if (data.userId === currentUser.id) {
-        // Show notification and wait before cleanup
         showToast('You have been blocked from this stream', 'error', 'Blocked');
         addSystemMessage('You have been blocked by the host and cannot rejoin this stream.');
         blockedUsers.add(currentRoomId);
-        
-        // Disable all controls immediately to prevent further interaction
+    
         chatInput.disabled = true;
         sendMessageBtn.disabled = true;
         if (startMediaBtn) startMediaBtn.disabled = true;
         if (toggleAudioBtn) toggleAudioBtn.disabled = true;
         if (toggleVideoBtn) toggleVideoBtn.disabled = true;
-        
-        // Give user time to see the message before cleanup
         setTimeout(() => {
             cleanup();
         }, 3000);
     } else {
         addSystemMessage(data.message);
     }
+}
+
+/**
+ * Remove a co-host video element
+ * @param {string} userId - The user ID of the co-host to remove
+ */
+function removeCoHostVideoElement(userId) {
+    const box = document.getElementById(`cohost-box-${userId}`);
+    if (box) {
+        console.log(`Removing co-host video box for user ${userId}`);
+        box.remove();
+    }
+    
+    const audio = document.getElementById(`cohost-audio-${userId}`);
+    if (audio) {
+        console.log(`Removing co-host audio for user ${userId}`);
+        audio.remove();
+    }
+    
+    cohostProducers.delete(userId);
+    
+    console.log(`Co-host ${userId} media elements removed`);
 }
 
 // Co-host invite modal handlers
@@ -918,15 +960,26 @@ startMediaBtn.addEventListener('click', async () => {
         
         if (isHost) {
             localVideo.srcObject = localStream;
-            localVideo.muted = true; // *** CRITICAL: Always mute your OWN local video to prevent echo ***
-            localVideo.volume = 0; // Extra safety
+            localVideo.muted = true; 
+            localVideo.volume = 0;
         } else if (isCoHost) {
-            // Co-host video goes to special box
-            cohostVideoBox.style.display = 'block';
-            cohostVideo.srcObject = localStream;
-            cohostVideo.muted = true; // *** CRITICAL: Always mute your OWN video to prevent echo ***
-            cohostVideo.volume = 0; // Extra safety
-            cohostVideoLabel.textContent = currentUser.username;
+            // Co-host video goes to the co-host container
+            const username = currentUser.username;
+            const userId = currentUser.id.toString();
+            
+            // Create co-host box for self
+            let box = document.getElementById(`cohost-box-${userId}`);
+            if (!box) {
+                box = createCoHostVideoElement(userId, `${username} (You)`);
+                cohostVideosContainer.appendChild(box);
+            }
+            
+            const video = document.getElementById(`cohost-video-${userId}`);
+            if (video) {
+                video.srcObject = localStream;
+                video.muted = true; 
+                video.volume = 0;
+            }
         }
         
         const producers = Array.from(client.producers.entries());
@@ -1101,6 +1154,16 @@ function updateViewersList(participants) {
     if (viewersModalList) viewersModalList.innerHTML = viewersHTML;
 }
 
+/**
+ * Handle co-host media removed event
+ * @param {Object} data - Event data containing userId and username
+ */
+function handleCoHostMediaRemoved(data) {
+    console.log('Co-host media removed:', data);
+    removeCoHostVideoElement(data.userId);
+    showToast(`${data.username} is no longer a co-host`, 'info');
+}
+
 // Global function for viewer actions
 window.handleViewerAction = function(button) {
     const userData = JSON.parse(button.dataset.user);
@@ -1201,6 +1264,18 @@ function cleanup() {
             console.log(`Stopped ${track.kind} track`);
         });
     }
+
+    if (cohostVideosContainer) {
+        cohostVideosContainer.innerHTML = '';
+        console.log('Cleared all co-host video boxes');
+    }
+
+    cohostProducers.clear();
+    
+    document.querySelectorAll('[id^="cohost-audio-"]').forEach(el => {
+        console.log('Removing orphaned co-host audio element:', el.id);
+        el.remove();
+    });
     
     currentRoomId = null;
     isHost = false;
@@ -1254,19 +1329,50 @@ function copyToClipboard(text) {
 }
 
 function ensureLocalAudioMuted() {
-    // Mute all local video/audio elements to prevent feedback
     if (localVideo && localVideo.srcObject) {
         localVideo.muted = true;
         localVideo.volume = 0;
     }
     
-    if (cohostVideo && cohostVideo.srcObject && isCoHost) {
-        cohostVideo.muted = true;
-        cohostVideo.volume = 0;
+    if (isCoHost && currentUser) {
+        const ownCoHostVideo = document.getElementById(`cohost-video-${currentUser.id}`);
+        if (ownCoHostVideo && ownCoHostVideo.srcObject) {
+            ownCoHostVideo.muted = true;
+            ownCoHostVideo.volume = 0;
+        }
     }
     
     console.log('Local audio monitoring disabled to prevent echo');
 }
+
+/**
+ * Create a co-host video element
+ * @param {string} userId - The user ID of the co-host
+ * @param {string} username - The username of the co-host
+ * @returns {HTMLElement} The created video box element
+ */
+function createCoHostVideoElement(userId, username) {
+    const box = document.createElement('div');
+    box.className = 'cohost-video-box';
+    box.id = `cohost-box-${userId}`;
+    
+    const video = document.createElement('video');
+    video.id = `cohost-video-${userId}`;
+    video.autoplay = true;
+    video.playsinline = true;
+    video.muted = false;
+    video.setAttribute('playsinline', '');
+    
+    const label = document.createElement('div');
+    label.className = 'cohost-video-label';
+    label.textContent = username;
+    
+    box.appendChild(video);
+    box.appendChild(label);
+    
+    return box;
+}
+
 // ===== MODAL CLOSE ON OUTSIDE CLICK =====
 window.addEventListener('click', (e) => {
     if (e.target === menuModal) menuModal.style.display = 'none';
