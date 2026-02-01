@@ -13,23 +13,23 @@ class StreamingClient {
         this.currentRoomId = null;
         
         this.configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                {
-                    urls: [
-                        'turn:turn.relay.metered.ca:80',
-                        'turn:turn.relay.metered.ca:443'
-                    ],
-                    username: 'free',
-                    credential: 'free'
-                }
+    iceServers: [
+        { urls: 'stun:stun.services.mozilla.com:3478' },
+        
+        {
+            urls: [
+                'turn:turn.relay.metered.ca:80',
+                'turn:turn.relay.metered.ca:443'
             ],
-            iceTransportPolicy: 'all',
-            bundlePolicy: 'max-bundle',
-            rtcpMuxPolicy: 'require',
-            iceCandidatePoolSize: 25
-        };
+            username: 'free',
+            credential: 'free'
+        }
+    ],
+    iceTransportPolicy: 'all',
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+    iceCandidatePoolSize: 10
+};
         
         this.audioConstraints = {
             echoCancellation: true,

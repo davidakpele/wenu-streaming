@@ -1634,5 +1634,3 @@ window.addEventListener('resize', () => {
         mobileViewersView.style.display = 'none';
     }
 });
-
-console.log('StreamSphere initialized');
