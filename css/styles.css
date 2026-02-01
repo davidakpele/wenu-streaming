@@ -192,9 +192,34 @@ body {
 }
 
 .btn-primary:disabled {
-    opacity: 0.5;
+    opacity: 0.7;
     cursor: not-allowed;
     transform: none;
+}
+
+.btn-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+    to { transform: rotate(360deg); }
 }
 
 .btn-full {
@@ -804,6 +829,23 @@ body {
     max-height: calc(100vh - 300px);
 }
 
+.viewers-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.viewers-list::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+
+.viewers-list::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+.viewers-list::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
 .viewer-item {
     display: flex;
     align-items: center;
@@ -812,6 +854,18 @@ body {
     background: var(--surface);
     border-radius: 8px;
     transition: background 0.2s;
+    animation: slideInViewer 0.4s ease-out;
+}
+
+@keyframes slideInViewer {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .viewer-item:hover {
@@ -900,7 +954,7 @@ body {
 }
 
 .chat-messages::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .chat-messages::-webkit-scrollbar-track {
@@ -908,8 +962,12 @@ body {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-    background: var(--secondary);
-    border-radius: 4px;
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
 }
 
 .chat-welcome {
@@ -1238,6 +1296,54 @@ body {
     color: var(--primary);
 }
 
+/* Confirmation Modal */
+.confirm-modal {
+    max-width: 450px;
+}
+
+.confirm-content {
+    padding: 20px 0;
+}
+
+.confirm-content p {
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.confirm-actions button {
+    flex: 1;
+}
+
+.btn-secondary {
+    background: var(--surface-light);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: var(--font-body);
+}
+
+.btn-secondary:hover {
+    background: var(--surface-lighter);
+    border-color: var(--text-dim);
+}
+
+.btn-cancel:hover {
+    border-color: var(--error);
+    color: var(--error);
+}
+
 /* Viewers Modal */
 .viewer-count-modal {
     background: var(--primary);
@@ -1255,6 +1361,23 @@ body {
     gap: 12px;
     max-height: 60vh;
     overflow-y: auto;
+}
+
+.viewers-modal-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.viewers-modal-list::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+
+.viewers-modal-list::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+.viewers-modal-list::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
 }
 
 /* ===== TOAST NOTIFICATIONS ===== */

@@ -40,9 +40,6 @@ const menuBtn = document.getElementById('menuBtn');
 const menuModal = document.getElementById('menuModal');
 const closeMenuModal = document.getElementById('closeMenuModal');
 const logoutBtn = document.getElementById('logoutBtn');
-const menuUserAvatar = document.getElementById('menuUserAvatar');
-const menuUserName = document.getElementById('menuUserName');
-const menuUserUsername = document.getElementById('menuUserUsername');
 
 // Start Stream Modal
 const startStreamModal = document.getElementById('startStreamModal');
@@ -79,6 +76,49 @@ const viewersModal = document.getElementById('viewersModal');
 const closeViewersModal = document.getElementById('closeViewersModal');
 const viewersModalList = document.getElementById('viewersModalList');
 const viewerCountModal = document.getElementById('viewerCountModal');
+
+// Confirmation Modal
+const confirmModal = document.getElementById('confirmModal');
+const confirmTitle = document.getElementById('confirmTitle');
+const confirmMessage = document.getElementById('confirmMessage');
+const confirmOk = document.getElementById('confirmOk');
+const confirmCancel = document.getElementById('confirmCancel');
+const closeConfirmModal = document.getElementById('closeConfirmModal');
+let confirmResolve = null;
+
+// ===== CONFIRMATION MODAL =====
+function showConfirm(message, title = 'Confirm Action') {
+    return new Promise((resolve) => {
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        confirmModal.style.display = 'flex';
+        confirmResolve = resolve;
+    });
+}
+
+confirmOk.addEventListener('click', () => {
+    if (confirmResolve) {
+        confirmResolve(true);
+        confirmResolve = null;
+    }
+    confirmModal.style.display = 'none';
+});
+
+confirmCancel.addEventListener('click', () => {
+    if (confirmResolve) {
+        confirmResolve(false);
+        confirmResolve = null;
+    }
+    confirmModal.style.display = 'none';
+});
+
+closeConfirmModal.addEventListener('click', () => {
+    if (confirmResolve) {
+        confirmResolve(false);
+        confirmResolve = null;
+    }
+    confirmModal.style.display = 'none';
+});
 
 // ===== TOAST NOTIFICATIONS =====
 function showToast(message, type = 'info', title = '') {
@@ -165,7 +205,15 @@ registerForm.addEventListener('submit', async (e) => {
 });
 
 async function register(email, username, firstName, lastName, password) {
+    const submitBtn = registerForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
     try {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.classList.add('btn-loading');
+        submitBtn.textContent = 'Creating account...';
+        
         const response = await fetch(`${API_URL}${REGISTER_ENDPOINT}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -190,11 +238,24 @@ async function register(email, username, firstName, lastName, password) {
     } catch (error) {
         console.error('Registration error:', error);
         showToast(error.message || 'Failed to create account', 'error');
+    } finally {
+        // Remove loading state
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-loading');
+        submitBtn.textContent = originalText;
     }
 }
 
 async function login(username, password) {
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
     try {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.classList.add('btn-loading');
+        submitBtn.textContent = 'Signing in...';
+        
         const response = await fetch(`${API_URL}${LOGIN_ENDPOINT}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -223,6 +284,11 @@ async function login(username, password) {
     } catch (error) {
         console.error('Login error:', error);
         showToast(error.message || 'Failed to login', 'error');
+    } finally {
+        // Remove loading state
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-loading');
+        submitBtn.textContent = originalText;
     }
 }
 
@@ -232,9 +298,6 @@ async function initializeApp() {
     
     const initials = (currentUser.firstName[0] + currentUser.lastName[0]).toUpperCase();
     streamerAvatar.textContent = initials;
-    menuUserAvatar.textContent = initials;
-    menuUserName.textContent = `${currentUser.firstName} ${currentUser.lastName}`;
-    menuUserUsername.textContent = `@${currentUser.username}`;
     
     await initStreamingClient();
     showStreamsList();
@@ -583,7 +646,8 @@ toggleVideoBtn.addEventListener('click', async () => {
 });
 
 leaveStreamBtn.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to leave?')) {
+    const confirmed = await showConfirm('Are you sure you want to leave the stream?', 'Leave Stream');
+    if (confirmed) {
         await client.leaveStream(currentRoomId);
         cleanup();
         showToast('Left stream', 'info');
@@ -591,7 +655,8 @@ leaveStreamBtn.addEventListener('click', async () => {
 });
 
 endStreamBtn.addEventListener('click', async () => {
-    if (confirm('Are you sure you want to end the stream?')) {
+    const confirmed = await showConfirm('Are you sure you want to end the stream? This will disconnect all viewers.', 'End Stream');
+    if (confirmed) {
         await client.endStream(currentRoomId);
         cleanup();
         showToast('Stream ended', 'success');
@@ -705,9 +770,10 @@ closeMenuModal.addEventListener('click', () => {
     menuModal.style.display = 'none';
 });
 
-logoutBtn.addEventListener('click', () => {
-    if (currentRoomId && !confirm('You are currently in a stream. Are you sure you want to logout?')) {
-        return;
+logoutBtn.addEventListener('click', async () => {
+    if (currentRoomId) {
+        const confirmed = await showConfirm('You are currently in a stream. Are you sure you want to logout?', 'Logout');
+        if (!confirmed) return;
     }
     logout();
 });
@@ -737,13 +803,14 @@ function logout() {
 }
 
 // ===== BACK BUTTON =====
-backBtn.addEventListener('click', () => {
+backBtn.addEventListener('click', async () => {
     if (currentRoomId) {
-        if (confirm('Are you sure you want to leave the stream?')) {
+        const confirmed = await showConfirm('Are you sure you want to leave the stream?', 'Leave Stream');
+        if (confirmed) {
             if (isHost) {
-                client.endStream(currentRoomId);
+                await client.endStream(currentRoomId);
             } else {
-                client.leaveStream(currentRoomId);
+                await client.leaveStream(currentRoomId);
             }
             cleanup();
         }
@@ -780,6 +847,14 @@ function startDurationTimer() {
 }
 
 function cleanup() {
+    // Stop all media tracks (camera and microphone)
+    if (client && client.localStream) {
+        client.localStream.getTracks().forEach(track => {
+            track.stop();
+            console.log(`Stopped ${track.kind} track`);
+        });
+    }
+    
     currentRoomId = null;
     isHost = false;
     streamStartTime = null;
@@ -828,6 +903,13 @@ window.addEventListener('click', (e) => {
     if (e.target === menuModal) menuModal.style.display = 'none';
     if (e.target === startStreamModal) startStreamModal.style.display = 'none';
     if (e.target === viewersModal) viewersModal.style.display = 'none';
+    if (e.target === confirmModal) {
+        if (confirmResolve) {
+            confirmResolve(false);
+            confirmResolve = null;
+        }
+        confirmModal.style.display = 'none';
+    }
 });
 
 // ===== RESTORE SESSION =====
