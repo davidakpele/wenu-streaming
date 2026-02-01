@@ -1,5 +1,4 @@
-/* StreamSphere - Modern Streaming Platform Styles */
-
+/* css/styles.css */
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
 * {
@@ -562,12 +561,20 @@ body {
     background: #000;
 }
 
+.video-container.audio-only-bg {
+    background: var(--primary);
+}
+
 .video-player {
     width: 100%;
     height: 500px;
     position: relative;
     overflow: hidden;
     background: #000;
+}
+
+.video-player.audio-only-bg {
+    background: var(--primary);
 }
 
 .video-bg {
@@ -612,6 +619,40 @@ body {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 11px;
+    backdrop-filter: blur(10px);
+}
+
+/* Co-host video box */
+.cohost-video-box {
+    position: absolute;
+    bottom: 80px;
+    right: 20px;
+    width: 200px;
+    height: 150px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 3px solid var(--primary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+}
+
+.cohost-video-box video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cohost-video-label {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
     backdrop-filter: blur(10px);
 }
 
@@ -796,31 +837,6 @@ body {
 .viewers-section {
     background: var(--surface-light);
     padding: 20px;
-    overflow-y: auto;
-}
-
-.viewers-section::-webkit-scrollbar {
-    width: 6px;
-}
-
-.viewers-section::-webkit-scrollbar-track {
-    background: var(--surface);
-    border-radius: 3px;
-}
-
-.viewers-section::-webkit-scrollbar-thumb {
-    background: var(--primary);
-    border-radius: 3px;
-}
-
-.viewers-section::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-dark);
-}
-
-/* Firefox scrollbar */
-.viewers-section {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary) var(--surface);
 }
 
 .viewers-header {
@@ -860,7 +876,6 @@ body {
 
 .viewers-list::-webkit-scrollbar-track {
     background: var(--surface);
-    border-radius: 3px;
 }
 
 .viewers-list::-webkit-scrollbar-thumb {
@@ -872,12 +887,6 @@ body {
     background: var(--primary-dark);
 }
 
-/* Firefox scrollbar */
-.viewers-list {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary) var(--surface);
-}
-
 .viewer-item {
     display: flex;
     align-items: center;
@@ -887,6 +896,7 @@ body {
     border-radius: 8px;
     transition: background 0.2s;
     animation: slideInViewer 0.4s ease-out;
+    position: relative;
 }
 
 @keyframes slideInViewer {
@@ -902,6 +912,35 @@ body {
 
 .viewer-item:hover {
     background: var(--surface-lighter);
+}
+
+.viewer-item-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+}
+
+.viewer-action-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viewer-action-btn:hover {
+    background: var(--surface-lighter);
+    color: var(--text-primary);
+}
+
+.viewer-action-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 .viewer-avatar {
@@ -937,6 +976,11 @@ body {
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.viewer-role.co-host {
+    color: var(--primary);
+    font-weight: 600;
 }
 
 /* ===== CHAT SECTION ===== */
@@ -991,7 +1035,6 @@ body {
 
 .chat-messages::-webkit-scrollbar-track {
     background: var(--surface-light);
-    border-radius: 3px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
@@ -1001,12 +1044,6 @@ body {
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
     background: var(--primary-dark);
-}
-
-/* Firefox scrollbar */
-.chat-messages {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary) var(--surface-light);
 }
 
 .chat-welcome {
@@ -1265,6 +1302,75 @@ body {
     border-color: var(--primary);
 }
 
+/* User Actions Modal */
+.user-actions-modal .modal-content {
+    max-width: 350px;
+}
+
+.user-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.user-action-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--surface-light);
+    border: none;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: var(--font-body);
+}
+
+.user-action-item:hover {
+    background: var(--surface-lighter);
+}
+
+.user-action-item.danger {
+    color: var(--error);
+}
+
+.user-action-item.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.user-action-item svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Co-host Invite Modal */
+.cohost-invite-modal .modal-content {
+    max-width: 450px;
+}
+
+.cohost-invite-content {
+    padding: 20px 0;
+}
+
+.cohost-invite-content p {
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.cohost-invite-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.cohost-invite-actions button {
+    flex: 1;
+}
+
 /* Menu Modal */
 .menu-modal {
     max-width: 350px;
@@ -1408,7 +1514,6 @@ body {
 
 .viewers-modal-list::-webkit-scrollbar-track {
     background: var(--surface);
-    border-radius: 3px;
 }
 
 .viewers-modal-list::-webkit-scrollbar-thumb {
@@ -1418,12 +1523,6 @@ body {
 
 .viewers-modal-list::-webkit-scrollbar-thumb:hover {
     background: var(--primary-dark);
-}
-
-/* Firefox scrollbar */
-.viewers-modal-list {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary) var(--surface);
 }
 
 /* ===== TOAST NOTIFICATIONS ===== */
@@ -1565,6 +1664,13 @@ body {
         left: 20px;
         right: 20px;
         max-width: none;
+    }
+
+    .cohost-video-box {
+        width: 150px;
+        height: 112px;
+        bottom: 70px;
+        right: 10px;
     }
 }
 
