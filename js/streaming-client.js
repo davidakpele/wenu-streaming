@@ -523,7 +523,7 @@ class StreamingClient {
         }
     }
 
-    async leaveStream(roomId) {
+    async leaveStream(roomId, isHostLeaving = false) {
         this.peerConnections.forEach(pc => {
             if (pc && pc.connectionState !== 'closed') {
                 pc.close();
@@ -562,7 +562,7 @@ class StreamingClient {
         
         this.currentRoomId = null;
 
-        await this.connection.invoke('LeaveStream', roomId);
+        await this.connection.invoke('LeaveStream', roomId, isHostLeaving);
     }
 
     async endStream(roomId) {
