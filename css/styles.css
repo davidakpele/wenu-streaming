@@ -512,7 +512,7 @@ body {
 }
 
 /* Mobile Layout */
-@media (max-width: 768px) {
+@media (max-width: 1000px) {
     .header {
         padding: 15px 20px;
     }
@@ -1620,7 +1620,7 @@ body {
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
+@media (max-width: 1000px) {
     .auth-box {
         padding: 40px 30px;
     }
